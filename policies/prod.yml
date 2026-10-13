@@ -29,15 +29,27 @@
 # Kubernetes pods (k3s on VM1). Host id = the pod's service account.
 - !layer k8s/boa
 - !layer k8s/petstore
-- !host k8s/system:serviceaccount:boa:secrets-provider
-- !host k8s/system:serviceaccount:petstore:petstore-app
+- !host
+  id: k8s/system:serviceaccount:boa:secrets-provider
+  annotations:                                     # extra checks on the pod's token
+    authn-jwt/k3s/kubernetes.io/namespace: boa
+    authn-jwt/k3s/kubernetes.io/serviceaccount/name: secrets-provider
+- !host
+  id: k8s/system:serviceaccount:petstore:petstore-app
+  annotations:
+    authn-jwt/k3s/kubernetes.io/namespace: petstore
+    authn-jwt/k3s/kubernetes.io/serviceaccount/name: petstore-app
 - !grant { role: !layer k8s/boa,      member: !host k8s/system:serviceaccount:boa:secrets-provider }
 - !grant { role: !layer k8s/petstore, member: !host k8s/system:serviceaccount:petstore:petstore-app }
 
 # Jenkins pipelines (VM2)
 - !layer jenkins/pipelines
-- !host jenkins/boa-deploy
-- !host jenkins/idira
+- !host
+  id: jenkins/boa-deploy
+  annotations: { authn-jwt/jenkins/jenkins_full_name: idira/boa-deploy }
+- !host
+  id: jenkins/idira
+  annotations: { authn-jwt/jenkins/jenkins_full_name: idira }
 - !grant { role: !layer jenkins/pipelines, members: [ !host jenkins/boa-deploy, !host jenkins/idira ] }
 
 # GitLab pipelines (gitlab.com, runner on VM2). Only the main branch.

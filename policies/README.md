@@ -56,6 +56,8 @@ conjur role memberships host:prod/k8s/system:serviceaccount:boa:secrets-provider
 
 ## Likely panel questions
 
+- **What are the `authn-jwt/k3s/...` annotations on the hosts?** Extra checks on the token. Besides the name, the pod's token must also say namespace `boa` and service account `secrets-provider`. Secrets Manager requires at least one such check per JWT host (`CONJ00099E` otherwise).
+
 - **Why a layer and not a permit per host?** Add a second pod or pipeline: put it in the layer, no rule changes.
 - **Why `read` and `execute`?** `read` lets you see the secret exists (metadata, audit). `execute` returns the value. An auditor would get `read` only.
 - **Where is dev?** Same structure, own branch. Nothing in prod is permitted on dev, so a prod pod can never fetch a dev secret, and the reverse.
