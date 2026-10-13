@@ -1,40 +1,56 @@
 // idira/boa-deploy: renames the bank on the Bank of Anthos frontend.
-// The deploy token comes from Secrets Manager at run time, lives 2h, and
-// can only touch the boa namespace. Jenkins stores no secret value.
+// Safe by design:
+//   - preflight: stop if the app is not healthy before we touch it
+//   - server-side dry run: the API server validates the change first
+//   - rolling update: the old pod keeps serving until the new one is Ready
+//   - automatic rollback if the new pod is not Ready in time
+// The deploy token comes from Secrets Manager at run time (2h, boa namespace only).
 pipeline {
   agent any
   parameters {
     string(name: 'BANK_NAME', defaultValue: 'Bank of Idira', description: 'Name shown on the Bank of Anthos frontend')
   }
   stages {
-    stage('Get deploy access from Secrets Manager') {
+    stage('Deploy safely') {
       steps {
         withCredentials([
           conjurSecretCredential(credentialsId: 'kube-server', variable: 'KUBE_SERVER'),
           conjurSecretCredential(credentialsId: 'kube-ca',     variable: 'KUBE_CA'),
           conjurSecretCredential(credentialsId: 'kube-token',  variable: 'KUBE_TOKEN')
         ]) {
-          sh '''
-            set +x
+          sh '''#!/usr/bin/env bash
+            set -euo pipefail
             umask 077
             echo "$KUBE_CA" > "$WORKSPACE/.ca.pem"
-            K="kubectl --server=$KUBE_SERVER --certificate-authority=$WORKSPACE/.ca.pem --token=$KUBE_TOKEN"
+            trap 'rm -f "$WORKSPACE/.ca.pem"' EXIT
+            K="kubectl --server=$KUBE_SERVER --certificate-authority=$WORKSPACE/.ca.pem --token=$KUBE_TOKEN -n boa"
 
-            echo "== Deploying to boa (allowed)"
-            $K -n boa set env deploy/frontend BANK_NAME="$BANK_NAME"
-            $K -n boa annotate deploy/frontend kubernetes.io/change-cause="jenkins build $BUILD_NUMBER" --overwrite
-            $K -n boa rollout status deploy/frontend --timeout=180s
+            echo "== 1. Preflight: frontend healthy?"
+            READY=$($K get deploy frontend -o jsonpath='{.status.readyReplicas}')
+            [ "${READY:-0}" -ge 1 ] || { echo "frontend not healthy, refusing to deploy"; exit 1; }
 
-            echo "== Trying the pet store (should be denied: wrong namespace)"
-            $K -n petstore get deploy 2>&1 | tail -1 || true
+            echo "== 2. Server-side dry run"
+            $K set env deploy/frontend BANK_NAME="$BANK_NAME" --dry-run=server -o name
 
-            rm -f "$WORKSPACE/.ca.pem"
+            echo "== 3. Rolling update (old pod serves until new pod is Ready)"
+            $K set env deploy/frontend BANK_NAME="$BANK_NAME"
+            $K annotate deploy/frontend kubernetes.io/change-cause="jenkins build $BUILD_NUMBER: BANK_NAME=$BANK_NAME" --overwrite
+            if ! $K rollout status deploy/frontend --timeout=180s; then
+              echo "== New version not Ready: rolling back"
+              $K rollout undo deploy/frontend
+              $K rollout status deploy/frontend --timeout=180s
+              exit 1
+            fi
+
+            echo "== 4. Least privilege check: pet store is out of scope"
+            kubectl --server=$KUBE_SERVER --certificate-authority=$WORKSPACE/.ca.pem --token=$KUBE_TOKEN \
+              -n petstore get deploy 2>&1 | tail -1 || true
           '''
         }
       }
     }
   }
   post {
-    success { echo "Open http://<VM1_IP>/ : the bank is now called '${params.BANK_NAME}'" }
+    success { echo "Bank is now called '${params.BANK_NAME}'. Rollback any time: Build with Parameters, BANK_NAME='Bank of Anthos'." }
   }
 }

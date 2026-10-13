@@ -16,9 +16,11 @@ Edit `lab.env` once (IPs, leader hostname, account). Every VM reads it.
 
 1. All VMs: `readiness/` (git, clone, `check.sh`)
 2. Secrets Manager VM: `secrets-manager/10`, `20`
-3. VM1: `vm1-k8s/00`, `10`, `11`, `20`, `21`, `22`, then `25`
+3. VM1: `vm1-k8s/00`, `10`, `11`, `20`, `21`, `22`, `23`, then `25`
 4. VM2: `vm2-cicd/10`, Jenkins UI steps, `11`, `20`
 5. VM3: `vm3-ai-agent/10`
+
+Rotation story and why nothing breaks: [ROTATION.md](ROTATION.md).
 
 Start here: [readiness/README.md](readiness/README.md).
 

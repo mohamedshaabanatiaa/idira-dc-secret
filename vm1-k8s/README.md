@@ -13,6 +13,8 @@ Two patterns on purpose: one for apps you can't touch (env vars, zero code chang
 
 DevOps VM1 (Ubuntu), as root. VM1 must reach the Secrets Manager VM on 443 and the internet (image pulls).
 
+See ../ROTATION.md for which rotation to show and why nothing breaks.
+
 ## Order
 
 ```bash
@@ -24,9 +26,10 @@ vi ../lab.env                 # CONJUR_HOST, CONJUR_IP, CONJUR_ACCOUNT, VM IPs (
 #  -> one manual step on the leader (script prints it): allowlist authn-jwt/k3s
 ./21-migrate-boa.sh           # BoA -> Secrets Manager
 ./22-migrate-petstore.sh      # Pet store -> Secretless
+./23-native-rotation-petstore.sh  # Secrets Manager rotates the pet store DB password itself (PT5M)
 ./25-cicd-deployers.sh        # Jenkins/GitLab deploy tokens (2h) into Secrets Manager; rerun = rotate
 ./30-rotate-boa.sh            # rotate accounts-db   (--ledger for ledger-db)
-./31-rotate-petstore.sh       # rotate pet store, no restart
+./31-rotate-petstore.sh       # rotate pet store, no restart (--kick drops open connections)
 ./90-status.sh                # where do the credentials live right now?
 ./40-revert-boa.sh            # back to hardcoded, rehearse again
 ./41-revert-petstore.sh

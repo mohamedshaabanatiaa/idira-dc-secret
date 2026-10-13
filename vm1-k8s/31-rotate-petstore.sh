@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Rotates the pet store DB password with NO restart.
-# Secretless fetches credentials per new connection, so we only need to
-# change the DB, update Secrets Manager, and drop old connections.
+# Secretless fetches credentials per NEW connection. Open connections stay
+# valid after ALTER ROLE, so nothing breaks. --kick also drops open
+# connections to prove the new password is used immediately.
 source "$(dirname "$0")/lib.sh"
 NS="$PET_NS"
 NEW=$(new_password)
@@ -9,13 +10,17 @@ IP=$(hostname -I | awk '{print $1}')
 POD_BEFORE=$(k -n "$NS" get pod -l app=petstore -o jsonpath='{.items[0].metadata.name}')
 
 log "Rotating pet store DB password"
+# DB first, then Secrets Manager right after: the gap is one API call, and
+# only NEW connections opened inside that gap would retry.
 k -n "$NS" exec petstore-db-0 -- psql -U "$PET_DB_USER" -d "$PET_DB_NAME" -qc "ALTER ROLE \"${PET_DB_USER}\" WITH PASSWORD '${NEW}';"
-ok "database updated"
 conjur_set bank/petstore/db/password "$NEW"
+ok "database and Secrets Manager updated"
 
-log "Dropping existing connections (forces Secretless to reconnect with the new value)"
-k -n "$NS" exec petstore-db-0 -- psql -U "$PET_DB_USER" -d "$PET_DB_NAME" -qtc \
-  "SELECT count(pg_terminate_backend(pid)) FROM pg_stat_activity WHERE pid <> pg_backend_pid() AND usename='${PET_DB_USER}';"
+if [[ "${1:-}" == "--kick" ]]; then
+  log "Dropping open connections (Secretless reconnects with the new value)"
+  k -n "$NS" exec petstore-db-0 -- psql -U "$PET_DB_USER" -d "$PET_DB_NAME" -qtc \
+    "SELECT count(pg_terminate_backend(pid)) FROM pg_stat_activity WHERE pid <> pg_backend_pid() AND usename='${PET_DB_USER}';"
+fi
 
 log "Proof: same pod, app still works"
 sleep 3

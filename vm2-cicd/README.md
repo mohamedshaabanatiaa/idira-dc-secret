@@ -6,10 +6,14 @@ token for exactly one namespace. No credential is stored in Jenkins or GitLab.
 | Pipeline | Identity in Secrets Manager | Can deploy | Visible result |
 |---|---|---|---|
 | Jenkins `idira/boa-deploy` | `bank/cicd/jenkins/boa-deploy` | Bank of Anthos only | Bank name changes on the frontend |
-| GitLab `idira-petstore-deploy` (main) | `bank/cicd/gitlab/<project path>` | Pet store only | Rolling restart, annotated with the pipeline id |
+| GitLab `idira-petstore-deploy` (main) | `bank/cicd/gitlab/<project path>` | Pet store only | Release recorded on the Deployment, no restart (`RESTART=true` for a real rolling restart) |
 
 Each pipeline also tries the other's namespace and secret: both denied, both in the audit.
 About 1 minute each, short enough for the panel.
+
+**Safe by design:** preflight health check, server-side dry run, rolling update (old pod serves until the new one is Ready), automatic rollback. To undo the Jenkins change: run it again with `BANK_NAME='Bank of Anthos'`.
+
+Run `vm1-k8s/25-cicd-deployers.sh` within 2 hours of the demo (or `TOKEN_TTL=8h`), so the tokens have not expired. An expired token fails the pipeline, never the app.
 
 ## Order
 

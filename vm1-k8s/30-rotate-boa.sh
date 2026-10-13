@@ -1,33 +1,37 @@
 #!/usr/bin/env bash
-# Rotates a Bank of Anthos DB password end to end.
+# Rotates a Bank of Anthos DB password with no outage.
 #   ./30-rotate-boa.sh            -> accounts-db (login, contacts)
 #   ./30-rotate-boa.sh --ledger   -> ledger-db (balances, payments)
-# Steps: new password in the DB -> new value in Secrets Manager ->
-#        sync job -> rolling restart of the consumers only.
+# Order matters (smallest possible window):
+#   1. new value in Secrets Manager   (running pods unaffected)
+#   2. sync job refreshes K8s Secret  (running pods still unaffected, env read at start)
+#   3. ALTER the DB password          (open pooled connections stay valid)
+#   4. rolling restart                (new pod Ready with new password before old pod stops)
 source "$(dirname "$0")/lib.sh"
 NS="$BOA_NS"
 NEW=$(new_password)
 
 if [[ "${1:-}" == "--ledger" ]]; then
-  log "Rotating ledger-db password"
-  k -n "$NS" exec ledger-db-0 -c postgres -- \
-    psql -U "$BOA_LEDGER_USER" -d "$BOA_LEDGER_DB" -qc "ALTER USER \"${BOA_LEDGER_USER}\" WITH PASSWORD '${NEW}';"
-  ok "database updated"
-  conjur_set bank/boa/ledger-db/password "$NEW"
+  DB=ledger-db-0; C=postgres; USER_="$BOA_LEDGER_USER"; DBN="$BOA_LEDGER_DB"
   APPS="ledgerwriter balancereader transactionhistory"
+  log "1. Secrets Manager: new ledger-db password"
+  conjur_set bank/boa/ledger-db/password "$NEW"
 else
-  log "Rotating accounts-db password"
-  k -n "$NS" exec accounts-db-0 -- \
-    psql -U "$BOA_ACCOUNTS_USER" -d "$BOA_ACCOUNTS_DB" -qc "ALTER USER \"${BOA_ACCOUNTS_USER}\" WITH PASSWORD '${NEW}';"
-  ok "database updated"
-  conjur_set bank/boa/accounts-db/password "$NEW"
-  conjur_set bank/boa/accounts-db/uri "postgresql://${BOA_ACCOUNTS_USER}:${NEW}@accounts-db:5432/${BOA_ACCOUNTS_DB}"
+  DB=accounts-db-0; C=accounts-db; USER_="$BOA_ACCOUNTS_USER"; DBN="$BOA_ACCOUNTS_DB"
   APPS="userservice contacts"
+  log "1. Secrets Manager: new accounts-db password"
+  conjur_set bank/boa/accounts-db/password "$NEW"
+  conjur_set bank/boa/accounts-db/uri "postgresql://${USER_}:${NEW}@accounts-db:5432/${DBN}"
 fi
 
+log "2. Sync into Kubernetes Secrets"
 "$HERE/sync-boa.sh"
 
-log "Rolling restart of consumers: ${APPS}"
+log "3. Database: ALTER password"
+k -n "$NS" exec "$DB" -c "$C" -- psql -U "$USER_" -d "$DBN" -qc "ALTER USER \"${USER_}\" WITH PASSWORD '${NEW}';"
+ok "database updated"
+
+log "4. Rolling restart: ${APPS}"
 for d in $APPS; do k -n "$NS" rollout restart deploy/$d >/dev/null; done
 for d in $APPS; do k -n "$NS" rollout status deploy/$d --timeout=300s; done
-ok "Rotated. New password starts with ${NEW:0:4}... and no human ever handled it."
+ok "Rotated with no outage. New password starts ${NEW:0:4}..., no human saw it."
