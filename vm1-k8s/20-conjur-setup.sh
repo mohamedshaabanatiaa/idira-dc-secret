@@ -32,17 +32,4 @@ conjur_set prod/petstore/db/password "$PET_DB_PASS"
 log "Publishing leader cert to both namespaces"
 for ns in "$BOA_NS" "$PET_NS"; do publish_conjur_connect "$ns"; done
 
-cat <<MSG
-
-$(printf '\033[1;33m')ONE MANUAL STEP ON THE SECRETS MANAGER VM (as root):$(printf '\033[0m')
-  The authenticator must be allowlisted on the leader. Edit /etc/conjur/config/conjur.yml:
-
-    authenticators:
-      - authn
-      - authn-jwt/${AUTHN_ID}
-
-  then run:   evoke configuration apply
-  check with: curl -sk https://localhost/info | jq .authenticators
-
-Next: ./21-migrate-boa.sh and ./22-migrate-petstore.sh
-MSG
+ok "VM1 is connected. Next: ./21-migrate-boa.sh and ./22-migrate-petstore.sh"
