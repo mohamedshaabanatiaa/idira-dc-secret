@@ -20,7 +20,7 @@ Edit `lab.env` once (IPs, leader hostname, account). Every VM reads it.
 4. VM2: `vm2-cicd/10`, Jenkins UI steps, `11`, `20`
 5. VM3: `vm3-ai-agent/10`
 
-Rotation story and why nothing breaks: [ROTATION.md](ROTATION.md).
+Live lab state: [TRACKER.md](TRACKER.md). Rotation story and why nothing breaks: [ROTATION.md](ROTATION.md).
 
 Start here: [readiness/README.md](readiness/README.md).
 
