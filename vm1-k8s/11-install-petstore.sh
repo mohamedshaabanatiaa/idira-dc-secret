@@ -75,6 +75,7 @@ spec:
         - { name: DB_USERNAME, value: "${PET_DB_USER}" }   # hardcoded
         - { name: DB_PASSWORD, value: "${PET_DB_PASS}" }   # hardcoded
         - { name: DB_PLATFORM, value: postgres }
+        - { name: JAVA_TOOL_OPTIONS, value: "-XX:-UseContainerSupport -Xmx384m" }   # same cgroup v2 fix as BoA
         ports: [ { containerPort: 8080 } ]
         readinessProbe:
           httpGet: { path: /pets, port: 8080 }
