@@ -1,0 +1,30 @@
+# Pet store deploy from gitlab.com through the runner on VM2.
+# The job proves who it is with a GitLab ID token (JWT). No CI variables
+# hold a credential.
+stages: [deploy]
+
+deploy-petstore:
+  stage: deploy
+  tags: [idira-vm2]
+  rules:
+    - if: $CI_COMMIT_BRANCH            # any branch runs, only main is allowed by policy
+  id_tokens:
+    CONJUR_JWT:
+      aud: conjur
+  script:
+    - set +x
+    - echo "Job identity = project ${CI_PROJECT_PATH}, ref ${CI_COMMIT_REF_NAME}"
+    - KUBE_SERVER=$(conjur-fetch gitlab bank/cicd/kube-server)
+    - conjur-fetch gitlab bank/cicd/kube-ca > ca.pem
+    - KUBE_TOKEN=$(conjur-fetch gitlab bank/cicd/gitlab/kube-token)
+    - K="kubectl --server=$KUBE_SERVER --certificate-authority=ca.pem --token=$KUBE_TOKEN"
+    - echo "== Deploying pet store (allowed)"
+    - $K -n petstore annotate deploy/petstore kubernetes.io/change-cause="gitlab pipeline $CI_PIPELINE_ID" --overwrite
+    - $K -n petstore rollout restart deploy/petstore
+    - $K -n petstore rollout status deploy/petstore --timeout=240s
+    - echo "== Trying Bank of Anthos (should be denied - wrong namespace)"
+    - $K -n boa get deploy 2>&1 | tail -1 || true
+    - echo "== Trying Jenkins' token (should be denied by Secrets Manager)"
+    - conjur-fetch gitlab bank/cicd/jenkins/kube-token >/dev/null || true
+  after_script:
+    - rm -f ca.pem

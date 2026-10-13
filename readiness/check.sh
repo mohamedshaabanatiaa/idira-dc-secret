@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Readiness check per VM role: ./readiness/check.sh sm|vm1|vm2|vm3
-# Reads CONJUR_HOST / CONJUR_IP from vm1-k8s/config.env (edit that first).
+# Reads CONJUR_HOST / CONJUR_IP from lab.env (edit that first).
 set -uo pipefail
 ROLE="${1:-}"; [[ "$ROLE" =~ ^(sm|vm1|vm2|vm3)$ ]] || { echo "usage: $0 sm|vm1|vm2|vm3"; exit 1; }
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 # shellcheck disable=SC1091
-source "$ROOT/vm1-k8s/config.env"
+source "$ROOT/lab.env"
 FAIL=0
 pass() { printf '  \033[32mPASS\033[0m %s\n' "$*"; }
 warn() { printf '  \033[33mWARN\033[0m %s\n' "$*"; }

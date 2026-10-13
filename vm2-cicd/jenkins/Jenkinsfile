@@ -1,0 +1,40 @@
+// idira/boa-deploy: renames the bank on the Bank of Anthos frontend.
+// The deploy token comes from Secrets Manager at run time, lives 2h, and
+// can only touch the boa namespace. Jenkins stores no secret value.
+pipeline {
+  agent any
+  parameters {
+    string(name: 'BANK_NAME', defaultValue: 'Bank of Idira', description: 'Name shown on the Bank of Anthos frontend')
+  }
+  stages {
+    stage('Get deploy access from Secrets Manager') {
+      steps {
+        withCredentials([
+          conjurSecretCredential(credentialsId: 'kube-server', variable: 'KUBE_SERVER'),
+          conjurSecretCredential(credentialsId: 'kube-ca',     variable: 'KUBE_CA'),
+          conjurSecretCredential(credentialsId: 'kube-token',  variable: 'KUBE_TOKEN')
+        ]) {
+          sh '''
+            set +x
+            umask 077
+            echo "$KUBE_CA" > "$WORKSPACE/.ca.pem"
+            K="kubectl --server=$KUBE_SERVER --certificate-authority=$WORKSPACE/.ca.pem --token=$KUBE_TOKEN"
+
+            echo "== Deploying to boa (allowed)"
+            $K -n boa set env deploy/frontend BANK_NAME="$BANK_NAME"
+            $K -n boa annotate deploy/frontend kubernetes.io/change-cause="jenkins build $BUILD_NUMBER" --overwrite
+            $K -n boa rollout status deploy/frontend --timeout=180s
+
+            echo "== Trying the pet store (should be denied: wrong namespace)"
+            $K -n petstore get deploy 2>&1 | tail -1 || true
+
+            rm -f "$WORKSPACE/.ca.pem"
+          '''
+        }
+      }
+    }
+  }
+  post {
+    success { echo "Open http://<VM1_IP>/ : the bank is now called '${params.BANK_NAME}'" }
+  }
+}

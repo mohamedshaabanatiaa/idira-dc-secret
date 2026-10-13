@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# conjur-fetch <authenticator> <variable-id>
+# Exchanges the job's JWT ($CONJUR_JWT) for a short-lived Secrets Manager token
+# and prints one secret. Nothing is written to disk.
+set -euo pipefail
+# shellcheck disable=SC1091
+source /etc/idira/conjur.env
+AUTHN="$1"; VAR="$2"
+: "${CONJUR_JWT:?CONJUR_JWT not set (add id_tokens to the job)}"
+enc() { python3 -c 'import sys,urllib.parse;print(urllib.parse.quote(sys.argv[1],safe=""))' "$1"; }
+TOKEN=$(curl -sS --fail --cacert "$CONJUR_CERT" -H "Accept-Encoding: base64" \
+  --data-urlencode "jwt=${CONJUR_JWT}" \
+  "${CONJUR_URL}/authn-jwt/${AUTHN}/${CONJUR_ACCOUNT}/authenticate") \
+  || { echo "conjur-fetch: authentication denied for this job identity" >&2; exit 1; }
+curl -sS --fail --cacert "$CONJUR_CERT" -H "Authorization: Token token=\"${TOKEN}\"" \
+  "${CONJUR_URL}/secrets/${CONJUR_ACCOUNT}/variable/$(enc "$VAR")" \
+  || { echo "conjur-fetch: access to ${VAR} denied" >&2; exit 1; }

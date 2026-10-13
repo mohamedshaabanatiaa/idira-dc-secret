@@ -1,0 +1,66 @@
+# Two CI tools, two authenticators, two identities, one policy model.
+# Loaded into the root branch after vm1-k8s/25-cicd-deployers.sh.
+
+# ---- Jenkins: JWT signed by the CyberArk Secrets Manager plugin ----------
+- !policy
+  id: conjur/authn-jwt/jenkins
+  body:
+  - !webservice
+  - !variable public-keys
+  - !variable issuer
+  - !variable token-app-property
+  - !variable identity-path
+  - !variable audience
+  - !group apps
+  - !permit { role: !group apps, privilege: [ read, authenticate ], resource: !webservice }
+
+# ---- GitLab: ID token signed by gitlab.com --------------------------------
+- !policy
+  id: conjur/authn-jwt/gitlab
+  body:
+  - !webservice
+  - !variable jwks-uri
+  - !variable issuer
+  - !variable token-app-property
+  - !variable identity-path
+  - !variable audience
+  - !group apps
+  - !permit { role: !group apps, privilege: [ read, authenticate ], resource: !webservice }
+
+# ---- Workload identities ---------------------------------------------------
+- !policy
+  id: bank/cicd/jenkins
+  body:
+  - !layer pipelines
+  - !host
+    id: idira                       # the Jenkins folder (credential lookups)
+    annotations:
+      jenkins: "true"
+      authn-jwt/jenkins/jenkins_full_name: idira
+  - !host
+    id: boa-deploy                  # the pipeline job idira/boa-deploy
+    annotations:
+      jenkins: "true"
+      authn-jwt/jenkins/jenkins_full_name: idira/boa-deploy
+  - !host
+    id: fallback                    # API-key login, only if JWT fights you
+    restricted_to: [ "__VM2_IP__/32" ]
+  - !grant
+    role: !layer pipelines
+    members: [ !host idira, !host boa-deploy, !host fallback ]
+
+- !policy
+  id: bank/cicd/gitlab
+  body:
+  - !layer pipelines
+  - !host
+    id: __GITLAB_PROJECT_PATH__     # = project_path claim
+    annotations:
+      authn-jwt/gitlab/ref: main    # only the main branch may deploy
+  - !grant { role: !layer pipelines, member: !host __GITLAB_PROJECT_PATH__ }
+
+# ---- Who may use what ------------------------------------------------------
+- !grant { role: !group conjur/authn-jwt/jenkins/apps, member: !layer bank/cicd/jenkins/pipelines }
+- !grant { role: !group conjur/authn-jwt/gitlab/apps,  member: !layer bank/cicd/gitlab/pipelines }
+- !grant { role: !group bank/cicd/jenkins-consumers,   member: !layer bank/cicd/jenkins/pipelines }
+- !grant { role: !group bank/cicd/gitlab-consumers,    member: !layer bank/cicd/gitlab/pipelines }

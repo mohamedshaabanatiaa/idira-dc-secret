@@ -10,14 +10,14 @@ apt-get install -y -qq curl jq git openssl python3 ca-certificates >/dev/null
 ok "curl jq git openssl python3"
 
 log "Mapping ${CONJUR_HOST} -> ${CONJUR_IP} in /etc/hosts"
-grep -q " ${CONJUR_HOST}\$" /etc/hosts || echo "${CONJUR_IP} ${CONJUR_HOST}" >> /etc/hosts
+ensure_hosts_entry
 ok "$(grep " ${CONJUR_HOST}\$" /etc/hosts)"
 
 if command -v k3s >/dev/null; then
   ok "k3s already installed: $(k3s --version | head -1)"
 else
   log "Installing k3s (traefik disabled, servicelb kept for LoadBalancer services)"
-  curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--disable traefik --write-kubeconfig-mode 644" sh -
+  curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--disable traefik --write-kubeconfig-mode 644 --tls-san ${VM1_IP}" sh -
 fi
 
 log "Waiting for node to be Ready"

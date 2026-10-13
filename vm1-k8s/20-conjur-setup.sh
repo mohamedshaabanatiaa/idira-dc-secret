@@ -8,18 +8,11 @@
 source "$(dirname "$0")/lib.sh"
 need jq; need curl; need openssl; need python3
 
-log "Fetching leader certificate chain from ${CONJUR_IP}:443 (SNI ${CONJUR_HOST})"
-openssl s_client -showcerts -connect "${CONJUR_IP}:443" -servername "${CONJUR_HOST}" </dev/null 2>/dev/null \
-  | awk '/BEGIN CERTIFICATE/,/END CERTIFICATE/' > "$CERT_FILE"
-[[ -s "$CERT_FILE" ]] || die "could not read certificate"
-openssl x509 -in "$CERT_FILE" -noout -subject -ext subjectAltName 2>/dev/null || true
-curl -sS --fail --cacert "$CERT_FILE" "${CONJUR_URL}/info" >/dev/null \
-  && ok "TLS to ${CONJUR_URL} verified" \
-  || warn "TLS check on /info failed. Check that ${CONJUR_HOST} is in the cert SAN, or the API prefix"
+fetch_cert
 
 log "Loading authenticator policy conjur/authn-jwt/${AUTHN_ID}"
-sed "s/__AUTHN_ID__/${AUTHN_ID}/g" policies/authn-jwt-k3s.yml.tmpl > .authn.yml
-conjur_policy root .authn.yml
+sed "s/__AUTHN_ID__/${AUTHN_ID}/g" "$HERE"/policies/authn-jwt-k3s.yml.tmpl > "$HERE/.authn.yml"
+conjur_policy root "$HERE/.authn.yml"
 
 log "Configuring authenticator from k3s"
 ISSUER=$(k get --raw /.well-known/openid-configuration | jq -r .issuer)
@@ -33,8 +26,8 @@ ok "issuer=${ISSUER}"
 
 log "Loading app identities, secrets and grants (policy bank)"
 sed -e "s/__AUTHN_ID__/${AUTHN_ID}/g" -e "s/__BOA_NS__/${BOA_NS}/g" -e "s/__PET_NS__/${PET_NS}/g" \
-  policies/bank-apps.yml.tmpl > .bank.yml
-conjur_policy root .bank.yml
+  "$HERE"/policies/bank-apps.yml.tmpl > "$HERE/.bank.yml"
+conjur_policy root "$HERE/.bank.yml"
 
 log "Seeding secrets with today's values (rotation comes later)"
 conjur_set bank/boa/accounts-db/username "$BOA_ACCOUNTS_USER"
@@ -48,7 +41,7 @@ conjur_set bank/petstore/db/password "$PET_DB_PASS"
 
 log "Publishing leader cert to both namespaces"
 for ns in "$BOA_NS" "$PET_NS"; do publish_conjur_connect "$ns"; done
-rm -f .authn.yml .bank.yml
+rm -f "$HERE/.authn.yml" "$HERE/.bank.yml"
 
 cat <<MSG
 

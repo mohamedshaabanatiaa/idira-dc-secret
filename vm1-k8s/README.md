@@ -16,7 +16,7 @@ DevOps VM1 (Ubuntu), as root. VM1 must reach the Secrets Manager VM on 443 and t
 ## Order
 
 ```bash
-vi config.env                 # CONJUR_HOST, CONJUR_IP, CONJUR_ACCOUNT
+vi ../lab.env                 # CONJUR_HOST, CONJUR_IP, CONJUR_ACCOUNT, VM IPs (lab-wide)
 ./00-install-k3s.sh           # k3s, jq, /etc/hosts entry for the leader
 ./10-install-boa.sh           # Bank of Anthos, original state
 ./11-install-petstore.sh      # Pet store, original state
@@ -24,6 +24,7 @@ vi config.env                 # CONJUR_HOST, CONJUR_IP, CONJUR_ACCOUNT
 #  -> one manual step on the leader (script prints it): allowlist authn-jwt/k3s
 ./21-migrate-boa.sh           # BoA -> Secrets Manager
 ./22-migrate-petstore.sh      # Pet store -> Secretless
+./25-cicd-deployers.sh        # Jenkins/GitLab deploy tokens (2h) into Secrets Manager; rerun = rotate
 ./30-rotate-boa.sh            # rotate accounts-db   (--ledger for ledger-db)
 ./31-rotate-petstore.sh       # rotate pet store, no restart
 ./90-status.sh                # where do the credentials live right now?
