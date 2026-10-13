@@ -8,9 +8,9 @@ k delete namespace "$BOA_NS" --ignore-not-found --wait=true --timeout=300s
 
 if [[ -s "$CERT_FILE" ]]; then
   log "Resetting Secrets Manager values to the originals"
-  conjur_set bank/boa/accounts-db/password "$BOA_ACCOUNTS_PASS"
-  conjur_set bank/boa/accounts-db/uri "postgresql://${BOA_ACCOUNTS_USER}:${BOA_ACCOUNTS_PASS}@accounts-db:5432/${BOA_ACCOUNTS_DB}"
-  conjur_set bank/boa/ledger-db/password "$BOA_LEDGER_PASS"
+  conjur_set prod/boa/accounts-db/password "$BOA_ACCOUNTS_PASS"
+  conjur_set prod/boa/accounts-db/uri "postgresql://${BOA_ACCOUNTS_USER}:${BOA_ACCOUNTS_PASS}@accounts-db:5432/${BOA_ACCOUNTS_DB}"
+  conjur_set prod/boa/ledger-db/password "$BOA_LEDGER_PASS"
 fi
 
 "$HERE/10-install-boa.sh"

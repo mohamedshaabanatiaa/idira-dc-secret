@@ -36,8 +36,8 @@ metadata: { name: accounts-db-creds }
 type: Opaque
 stringData:
   conjur-map: |-
-    POSTGRES_PASSWORD: bank/boa/accounts-db/password
-    ACCOUNTS_DB_URI: bank/boa/accounts-db/uri
+    POSTGRES_PASSWORD: prod/boa/accounts-db/password
+    ACCOUNTS_DB_URI: prod/boa/accounts-db/uri
 ---
 apiVersion: v1
 kind: Secret
@@ -45,8 +45,8 @@ metadata: { name: ledger-db-creds }
 type: Opaque
 stringData:
   conjur-map: |-
-    POSTGRES_PASSWORD: bank/boa/ledger-db/password
-    SPRING_DATASOURCE_PASSWORD: bank/boa/ledger-db/password
+    POSTGRES_PASSWORD: prod/boa/ledger-db/password
+    SPRING_DATASOURCE_PASSWORD: prod/boa/ledger-db/password
 YAML
 
 "$HERE/sync-boa.sh"

@@ -23,7 +23,7 @@ class SecretsManager:
         cfg = _env()
         self.url, self.account, self.cert = cfg["CONJUR_URL"], cfg["CONJUR_ACCOUNT"], cfg["CONJUR_CERT"]
         self.petstore = cfg.get("PETSTORE_URL", "")
-        self.login = f"host/bank/agents/{agent}"
+        self.login = f"host/prod/agents/{agent}"
         with open(f"/etc/idira/{agent}.key") as f:
             self._api_key = f.read().strip()
 

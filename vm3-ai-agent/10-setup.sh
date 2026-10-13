@@ -27,22 +27,19 @@ CONJUR_CERT=/etc/idira/conjur.pem
 PETSTORE_URL=http://${VM1_IP}:30080
 ENV
 
-log "Agent identities"
-render "$HERE/policies/agents.yml.tmpl" > "$HERE/.agents.yml"
-conjur_policy root "$HERE/.agents.yml" >/dev/null && ok "policy bank/agents"
-rm -f "$HERE/.agents.yml"
+log "Agent login keys (identities come from policies/bank.yml: prod/agents/*)"
 
 for a in support-agent rogue-agent; do
-  umask 077; conjur_host_key "bank/agents/$a" > "/etc/idira/$a.key"
+  umask 077; conjur_host_key "prod/agents/$a" > "/etc/idira/$a.key"
   ok "/etc/idira/$a.key (root only, works only from ${VM3_IP})"
 done
 
 log "Claude API key -> Secrets Manager"
-if conjur_get bank/agents/anthropic-api-key >/dev/null 2>&1; then
+if conjur_get prod/ai/anthropic-api-key >/dev/null 2>&1; then
   ok "already stored (rerun with --new-key to replace)"
 fi
-if [[ "${1:-}" == "--new-key" ]] || ! conjur_get bank/agents/anthropic-api-key >/dev/null 2>&1; then
+if [[ "${1:-}" == "--new-key" ]] || ! conjur_get prod/ai/anthropic-api-key >/dev/null 2>&1; then
   read -r -s -p "Paste the Claude API key (sk-ant-...): " AK; echo
-  conjur_set bank/agents/anthropic-api-key "$AK"; unset AK
+  conjur_set prod/ai/anthropic-api-key "$AK"; unset AK
 fi
 ok "Ready: sudo $APP/venv/bin/python $APP/agent.py"

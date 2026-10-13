@@ -26,9 +26,9 @@ ok "NodePort ${PORT}"
 
 log "Rotation policy (ttl ${ROTATION_TTL})"
 render "$HERE/policies/petstore-native-rotation.yml.tmpl" > "$HERE/.rot.yml"
-conjur_policy bank/petstore "$HERE/.rot.yml" >/dev/null && ok "annotations set"
+conjur_policy prod "$HERE/.rot.yml" >/dev/null && ok "annotations set"
 rm -f "$HERE/.rot.yml"
-conjur_set bank/petstore/db/url "${VM1_IP}:${PORT}/${PET_DB_NAME}"
+conjur_set prod/petstore/db/url "${VM1_IP}:${PORT}/${PET_DB_NAME}"
 
 cat <<MSG
 

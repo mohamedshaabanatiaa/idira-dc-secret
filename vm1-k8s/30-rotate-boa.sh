@@ -15,13 +15,13 @@ if [[ "${1:-}" == "--ledger" ]]; then
   DB=ledger-db-0; C=postgres; USER_="$BOA_LEDGER_USER"; DBN="$BOA_LEDGER_DB"
   APPS="ledgerwriter balancereader transactionhistory"
   log "1. Secrets Manager: new ledger-db password"
-  conjur_set bank/boa/ledger-db/password "$NEW"
+  conjur_set prod/boa/ledger-db/password "$NEW"
 else
   DB=accounts-db-0; C=accounts-db; USER_="$BOA_ACCOUNTS_USER"; DBN="$BOA_ACCOUNTS_DB"
   APPS="userservice contacts"
   log "1. Secrets Manager: new accounts-db password"
-  conjur_set bank/boa/accounts-db/password "$NEW"
-  conjur_set bank/boa/accounts-db/uri "postgresql://${USER_}:${NEW}@accounts-db:5432/${DBN}"
+  conjur_set prod/boa/accounts-db/password "$NEW"
+  conjur_set prod/boa/accounts-db/uri "postgresql://${USER_}:${NEW}@accounts-db:5432/${DBN}"
 fi
 
 log "2. Sync into Kubernetes Secrets"

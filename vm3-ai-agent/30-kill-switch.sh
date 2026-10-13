@@ -6,10 +6,10 @@ source "$(dirname "$0")/../common/lib.sh"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 f="$HERE/.ks.yml"
 case "${1:-}" in
-  off) echo '- !revoke { role: !group llm-users, member: !host support-agent }' > "$f"
-       conjur_policy bank/agents "$f" PATCH >/dev/null; ok "support-agent cut off" ;;
-  on)  echo '- !grant { role: !group llm-users, member: !host support-agent }' > "$f"
-       conjur_policy bank/agents "$f" POST >/dev/null; ok "support-agent restored" ;;
+  off) echo '- !deny { role: !host agents/support-agent, privileges: [ read, execute ], resource: !variable ai/anthropic-api-key }' > "$f"
+       conjur_policy prod "$f" PATCH >/dev/null; ok "support-agent cut off" ;;
+  on)  echo '- !permit { role: !host agents/support-agent, privileges: [ read, execute ], resource: !variable ai/anthropic-api-key }' > "$f"
+       conjur_policy prod "$f" POST >/dev/null; ok "support-agent restored" ;;
   *)   die "usage: $0 off|on" ;;
 esac
 rm -f "$f"

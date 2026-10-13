@@ -1,18 +1,15 @@
 #!/usr/bin/env bash
-# Connects k3s to Secrets Manager Self-Hosted:
+# Connects k3s to Secrets Manager Self-Hosted.
+# Prereq: policies/bank.yml and policies/authn.yml loaded from the Windows CLI.
 #  1. trusts the leader certificate
-#  2. creates the authn-jwt/<AUTHN_ID> authenticator from the k3s issuer + JWKS
-#  3. loads app identities, secrets and grants
-#  4. seeds the secrets with the CURRENT (original) values
+#  2. configures authn-jwt/k3s with this cluster's issuer + signing keys
+#  3. seeds the secrets with the CURRENT (original) values
+#  4. publishes the connection details + cert into both namespaces
 # Run on DevOps VM1 after 00/10/11. Uses the REST API, no CLI needed.
 source "$(dirname "$0")/lib.sh"
 need jq; need curl; need openssl; need python3
 
 fetch_cert
-
-log "Loading authenticator policy conjur/authn-jwt/${AUTHN_ID}"
-sed "s/__AUTHN_ID__/${AUTHN_ID}/g" "$HERE"/policies/authn-jwt-k3s.yml.tmpl > "$HERE/.authn.yml"
-conjur_policy root "$HERE/.authn.yml"
 
 log "Configuring authenticator from k3s"
 ISSUER=$(k get --raw /.well-known/openid-configuration | jq -r .issuer)
@@ -24,24 +21,16 @@ conjur_set "conjur/authn-jwt/${AUTHN_ID}/identity-path" "$APP_IDENTITY_PATH"
 conjur_set "conjur/authn-jwt/${AUTHN_ID}/audience" "conjur"
 ok "issuer=${ISSUER}"
 
-log "Loading app identities, secrets and grants (policy bank)"
-sed -e "s/__AUTHN_ID__/${AUTHN_ID}/g" -e "s/__BOA_NS__/${BOA_NS}/g" -e "s/__PET_NS__/${PET_NS}/g" \
-  "$HERE"/policies/bank-apps.yml.tmpl > "$HERE/.bank.yml"
-conjur_policy root "$HERE/.bank.yml"
-
 log "Seeding secrets with today's values (rotation comes later)"
-conjur_set bank/boa/accounts-db/username "$BOA_ACCOUNTS_USER"
-conjur_set bank/boa/accounts-db/password "$BOA_ACCOUNTS_PASS"
-conjur_set bank/boa/accounts-db/uri "postgresql://${BOA_ACCOUNTS_USER}:${BOA_ACCOUNTS_PASS}@accounts-db:5432/${BOA_ACCOUNTS_DB}"
-conjur_set bank/boa/ledger-db/username "$BOA_LEDGER_USER"
-conjur_set bank/boa/ledger-db/password "$BOA_LEDGER_PASS"
-conjur_set bank/petstore/db/address "petstore-db.${PET_NS}.svc.cluster.local:5432/${PET_DB_NAME}"
-conjur_set bank/petstore/db/username "$PET_DB_USER"
-conjur_set bank/petstore/db/password "$PET_DB_PASS"
+conjur_set prod/boa/accounts-db/password "$BOA_ACCOUNTS_PASS"
+conjur_set prod/boa/accounts-db/uri "postgresql://${BOA_ACCOUNTS_USER}:${BOA_ACCOUNTS_PASS}@accounts-db:5432/${BOA_ACCOUNTS_DB}"
+conjur_set prod/boa/ledger-db/password "$BOA_LEDGER_PASS"
+conjur_set prod/petstore/db/address "petstore-db.${PET_NS}.svc.cluster.local:5432/${PET_DB_NAME}"
+conjur_set prod/petstore/db/username "$PET_DB_USER"
+conjur_set prod/petstore/db/password "$PET_DB_PASS"
 
 log "Publishing leader cert to both namespaces"
 for ns in "$BOA_NS" "$PET_NS"; do publish_conjur_connect "$ns"; done
-rm -f "$HERE/.authn.yml" "$HERE/.bank.yml"
 
 cat <<MSG
 

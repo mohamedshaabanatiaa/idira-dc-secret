@@ -38,15 +38,15 @@ vi ../lab.env                 # CONJUR_HOST, CONJUR_IP, CONJUR_ACCOUNT, VM IPs (
 
 The admin password is prompted once per run. Or `export CONJUR_ADMIN_PASSWORD=...` in the shell. Never commit it.
 
-## What gets created in Secrets Manager
+## What it uses in Secrets Manager
+
+Defined in `../policies/bank.yml` (loaded from the Windows CLI first):
 
 ```
-conjur/authn-jwt/k3s                      JWT authenticator, trusts the k3s token issuer
-bank/k8s/system:serviceaccount:boa:secrets-provider     host (layer bank/k8s/boa)
-bank/k8s/system:serviceaccount:petstore:petstore-app    host (layer bank/k8s/petstore)
-bank/boa/accounts-db/{username,password,uri}
-bank/boa/ledger-db/{username,password}
-bank/petstore/db/{address,username,password}
+prod/k8s/system:serviceaccount:boa:secrets-provider      host, layer prod/k8s/boa
+prod/k8s/system:serviceaccount:petstore:petstore-app     host, layer prod/k8s/petstore
+prod/boa/accounts-db/{password,uri}, prod/boa/ledger-db/password
+prod/petstore/db/{address,username,password}
 ```
 
 Each layer can read only its own app's secrets. Identity comes from the Kubernetes service account token (audience `conjur`), so there is no API key anywhere in the cluster.

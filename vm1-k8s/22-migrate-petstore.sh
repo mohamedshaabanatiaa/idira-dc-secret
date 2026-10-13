@@ -22,13 +22,13 @@ data:
         credentials:
           address:
             from: conjur
-            get: bank/petstore/db/address
+            get: prod/petstore/db/address
           username:
             from: conjur
-            get: bank/petstore/db/username
+            get: prod/petstore/db/username
           password:
             from: conjur
-            get: bank/petstore/db/password
+            get: prod/petstore/db/password
           sslmode: disable
 YAML
 

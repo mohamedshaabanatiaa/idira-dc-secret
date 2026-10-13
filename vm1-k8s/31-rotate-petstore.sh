@@ -13,7 +13,7 @@ log "Rotating pet store DB password"
 # DB first, then Secrets Manager right after: the gap is one API call, and
 # only NEW connections opened inside that gap would retry.
 k -n "$NS" exec petstore-db-0 -- psql -U "$PET_DB_USER" -d "$PET_DB_NAME" -qc "ALTER ROLE \"${PET_DB_USER}\" WITH PASSWORD '${NEW}';"
-conjur_set bank/petstore/db/password "$NEW"
+conjur_set prod/petstore/db/password "$NEW"
 ok "database and Secrets Manager updated"
 
 if [[ "${1:-}" == "--kick" ]]; then

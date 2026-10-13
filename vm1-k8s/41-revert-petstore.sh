@@ -6,7 +6,7 @@ k delete namespace "$PET_NS" --ignore-not-found --wait=true --timeout=300s
 
 if [[ -s "$CERT_FILE" ]]; then
   log "Resetting Secrets Manager value to the original"
-  conjur_set bank/petstore/db/password "$PET_DB_PASS"
+  conjur_set prod/petstore/db/password "$PET_DB_PASS"
 fi
 
 "$HERE/11-install-petstore.sh"

@@ -1,0 +1,47 @@
+# =============================================================================
+# authn.yml  -  How workloads prove who they are (signed JWTs, no passwords).
+# Load after bank.yml:
+#     conjur policy load -b root -f authn.yml
+# One authenticator per platform. Each trusts one issuer's signing keys.
+# =============================================================================
+
+- !policy
+  id: conjur/authn-jwt/k3s          # Kubernetes service account tokens (VM1)
+  body:
+  - !webservice
+  - !variable public-keys           # k3s signing keys (pasted in, leader can't reach k3s API)
+  - !variable issuer
+  - !variable token-app-property    # which claim names the workload: "sub"
+  - !variable identity-path         # where its host lives: prod/k8s
+  - !variable audience
+  - !group apps
+  - !permit { role: !group apps, privilege: [ read, authenticate ], resource: !webservice }
+
+- !policy
+  id: conjur/authn-jwt/jenkins      # Jenkins plugin tokens (VM2)
+  body:
+  - !webservice
+  - !variable public-keys
+  - !variable issuer
+  - !variable token-app-property
+  - !variable identity-path
+  - !variable audience
+  - !group apps
+  - !permit { role: !group apps, privilege: [ read, authenticate ], resource: !webservice }
+
+- !policy
+  id: conjur/authn-jwt/gitlab       # gitlab.com CI tokens
+  body:
+  - !webservice
+  - !variable jwks-uri              # leader fetches gitlab.com keys itself
+  - !variable issuer
+  - !variable token-app-property
+  - !variable identity-path
+  - !variable audience
+  - !group apps
+  - !permit { role: !group apps, privilege: [ read, authenticate ], resource: !webservice }
+
+# Who may use which login door
+- !grant { role: !group conjur/authn-jwt/k3s/apps,     members: [ !layer prod/k8s/boa, !layer prod/k8s/petstore ] }
+- !grant { role: !group conjur/authn-jwt/jenkins/apps, member: !layer prod/jenkins/pipelines }
+- !grant { role: !group conjur/authn-jwt/gitlab/apps,  member: !layer prod/gitlab/pipelines }

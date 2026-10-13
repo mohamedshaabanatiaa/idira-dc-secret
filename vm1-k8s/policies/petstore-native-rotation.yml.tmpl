@@ -1,16 +1,11 @@
 # Native rotation: Secrets Manager itself changes the pet store DB password
-# every __ROTATION_TTL__ (ALTER ROLE + store, in one transaction).
-# Requires sibling variables url, username, password in the same policy.
-# Loaded into bank/petstore.
+# every __ROTATION_TTL__ (ALTER ROLE + store, in one step).
+# The rotator needs sibling variables url, username, password.
+# Loaded into the prod branch.
+- !variable petstore/db/url            # host:port/database as seen FROM THE LEADER
 - !variable
-  id: db/url                     # host:port/database as seen FROM THE LEADER
-- !variable
-  id: db/password
+  id: petstore/db/password
   annotations:
     rotation/rotator: postgresql/password
     rotation/ttl: __ROTATION_TTL__
     rotation/postgresql/password/length: 24
-- !permit
-  role: !group consumers
-  privileges: [ read, execute ]
-  resource: !variable db/url

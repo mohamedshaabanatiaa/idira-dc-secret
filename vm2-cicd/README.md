@@ -5,8 +5,8 @@ token for exactly one namespace. No credential is stored in Jenkins or GitLab.
 
 | Pipeline | Identity in Secrets Manager | Can deploy | Visible result |
 |---|---|---|---|
-| Jenkins `idira/boa-deploy` | `bank/cicd/jenkins/boa-deploy` | Bank of Anthos only | Bank name changes on the frontend |
-| GitLab `idira-petstore-deploy` (main) | `bank/cicd/gitlab/<project path>` | Pet store only | Release recorded on the Deployment, no restart (`RESTART=true` for a real rolling restart) |
+| Jenkins `idira/boa-deploy` | `prod/jenkins/boa-deploy` | Bank of Anthos only | Bank name changes on the frontend |
+| GitLab `idira-petstore-deploy` (main) | `prod/gitlab/mohamedshaabanatiaa/idira-petstore-deploy` | Pet store only | Release recorded on the Deployment, no restart (`RESTART=true` for a real rolling restart) |
 
 Each pipeline also tries the other's namespace and secret: both denied, both in the audit.
 About 1 minute each, short enough for the panel.
@@ -41,17 +41,16 @@ Run `vm1-k8s/25-cicd-deployers.sh` within 2 hours of the demo (or `TOKEN_TTL=8h`
 
    | ID | Variable path |
    |---|---|
-   | `kube-server` | `bank/cicd/kube-server` |
-   | `kube-ca` | `bank/cicd/kube-ca` |
-   | `kube-token` | `bank/cicd/jenkins/kube-token` |
+   | `kube-server` | `prod/cicd/kube-server` |
+   | `kube-ca` | `prod/cicd/kube-ca` |
+   | `kube-token` | `prod/cicd/jenkins-token` |
 5. Inside the folder: **New Item > Pipeline** named `boa-deploy`. Pipeline script: paste `jenkins/Jenkinsfile` (or *from SCM* pointing at this repo, path `vm2-cicd/jenkins/Jenkinsfile`).
 6. Run `./20-conjur-setup.sh` now (it reads the plugin's JWKS). Then **Build with Parameters**.
 
-If JWT auth will not work in time: `./20-conjur-setup.sh --fallback-key`, and in step 2 pick API key auth with login `host/bank/cicd/jenkins/fallback`. That key only works from VM2's IP. Say so in the demo: it is the honest fallback, JWT is the target.
 
 ## GitLab steps (gitlab.com)
 
-1. Create project `idira-petstore-deploy` under your user. Set `GITLAB_PROJECT_PATH` in `../lab.env` to `<user>/idira-petstore-deploy`.
+1. Create project `idira-petstore-deploy` under your user. If the path is not `mohamedshaabanatiaa/idira-petstore-deploy`, change the gitlab host id in `../policies/bank.yml` and reload it.
 2. **Settings > CI/CD > Runners > New project runner**: tag `idira-vm2`, *run untagged* off. Copy the `glrt-` token into `./11-install-gitlab-runner.sh`.
 3. Commit `gitlab/.gitlab-ci.yml` to the project root on `main`. The pipeline starts by itself.
 4. Bonus demo: push the same file on a branch `feature-x`. Same project, same runner, **denied**: policy only trusts `ref: main`.
@@ -61,6 +60,6 @@ If JWT auth will not work in time: `./20-conjur-setup.sh --fallback-key`, and in
 | Symptom | Look at |
 |---|---|
 | Jenkins 401 | leader log `grep authn-jwt`; issuer mismatch -> rerun with `JENKINS_ISSUER='http://VM2_IP:8080/'`; host id must equal the `jenkins_name` claim |
-| GitLab 401 | `GITLAB_PROJECT_PATH` matches exactly; job runs on `main`; leader can reach `gitlab.com` |
+| GitLab 401 | host id in `policies/bank.yml` matches the project path exactly; job runs on `main`; leader can reach `gitlab.com` |
 | kubectl `Unauthorized` | token expired: rerun `vm1-k8s/25-cicd-deployers.sh` (that is the rotation) |
 | kubectl x509 | k3s was installed before `--tls-san VM1_IP` was added: reinstall or use the node hostname |

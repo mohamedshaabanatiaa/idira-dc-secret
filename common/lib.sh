@@ -61,7 +61,7 @@ conjur_set() {
   local token; token=$(conjur_token)
   curl -sS --fail --cacert "$CERT_FILE" -X POST \
     -H "Authorization: Token token=\"${token}\"" --data-binary "$2" \
-    "${CONJUR_URL}/secrets/${CONJUR_ACCOUNT}/variable/$(urlenc "$1")" || die "set failed: $1"
+    "${CONJUR_URL}/secrets/${CONJUR_ACCOUNT}/variable/$(urlenc "$1")" || die "set failed: $1 (is policies/bank.yml loaded? see policies/README.md)"
   ok "set $1"
 }
 

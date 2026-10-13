@@ -3,9 +3,9 @@ from idira import AccessDenied, SecretsManager, mask
 
 sm = SecretsManager("rogue-agent")
 print(f"Rogue agent running as {sm.login}\n")
-for path in ["bank/agents/anthropic-api-key",
-             "bank/boa/accounts-db/password",
-             "bank/cicd/jenkins/kube-token"]:
+for path in ["prod/ai/anthropic-api-key",
+             "prod/boa/accounts-db/password",
+             "prod/cicd/jenkins-token"]:
     try:
         print(f"  \033[33mLEAK\033[0m {path} = {mask(sm.get(path))}")
     except AccessDenied as e:

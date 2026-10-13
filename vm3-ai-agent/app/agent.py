@@ -1,6 +1,6 @@
 """Support agent: answers questions about the pet store inventory with Claude.
 
-Identity: host/bank/agents/support-agent (Secrets Manager).
+Identity: host/prod/agents/support-agent (Secrets Manager).
 The Claude API key is fetched from Secrets Manager on EVERY turn and kept only
 in memory, so revoking the agent takes effect on its next answer.
 """
@@ -47,7 +47,7 @@ def run_tool(name, args):
 
 def turn(history):
     try:
-        key = sm.get("bank/agents/anthropic-api-key")
+        key = sm.get("prod/ai/anthropic-api-key")
     except AccessDenied as e:
         print(f"\033[31m[Secrets Manager] {e}\n Agent has been cut off. No Claude key, no answers.\033[0m")
         return
