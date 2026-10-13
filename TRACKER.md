@@ -33,6 +33,7 @@ Live state of the lab. **No passwords here** (tracked outside the repo).
 | Topology | single node (leader). Production: + 2 standbys, followers per cluster/region |
 | UI | `https://conjur-leader.bank.local` (Windows hosts entry `10.0.0.2 conjur-leader.bank.local` added), admin login ok |
 | Windows CLI | `C:\Program Files\Conjur\conjur.exe` (from Desktop\Secrets Manager CLI, `conjur_windows_amd64.exe`), on PATH, `conjur init -u https://conjur-leader.bank.local -a bank --self-signed` |
+| Policy | `policies/root.yml`, `prod.yml`, `authenticators.yml` loaded from Windows CLI (13 Oct). 11 secrets under `prod/`, 3 JWT authenticators defined (not yet enabled/configured) |
 | Linux CLI | `conjur-cli_9.3.0_amd64.deb` in the same Desktop folder (copy to VMs via MobaXterm SFTP) |
 | Role in `/info` | `master` (= leader, legacy name in the API) |
 
@@ -47,7 +48,7 @@ Live state of the lab. **No passwords here** (tracked outside the repo).
 
 | Day | Done | Next |
 |---|---|---|
-| 1 (13 Oct) | Docker, leader installed + configured, disk extended on all VMs, UI login, Windows CLI logged in, hostnames, repo on VM1-3, k3s, Bank of Anthos (2 fixes), pet store | Bank policy model (environments, apps, hosts, layers), then connect VM1 to Secrets Manager |
+| 1 (13 Oct) | Docker, leader installed + configured, disk extended on all VMs, UI login, Windows CLI logged in, hostnames, repo on VM1-3, k3s, Bank of Anthos (2 fixes), pet store, policy loaded | Enable authenticators on leader, connect VM1 (20, 21, 22) |
 
 ## Issues log
 
