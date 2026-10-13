@@ -67,7 +67,7 @@ fi
 
 hdr "Repo"
 git -C "$ROOT" fetch -q 2>/dev/null && {
-  B=$(git -C "$ROOT" rev-list --count HEAD..@{u} 2>/dev/null || echo 0)
+  B=$(git -C "$ROOT" rev-list --count 'HEAD..@{u}' 2>/dev/null || echo 0)
   (( B == 0 )) && pass "repo up to date ($(git -C "$ROOT" log -1 --format=%h))" || warn "$B new commit(s): git pull"
 } || warn "could not fetch (token cache expired?)"
 
