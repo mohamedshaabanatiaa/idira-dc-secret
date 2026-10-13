@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
-# Installs the Secrets Manager Self-Hosted leader as a container on this VM.
-#   ./10-install-leader.sh /path/to/conjur-appliance-<version>.tar.gz
-# Check the file name and image tag against what the lab gave you.
+# Installs the Secrets Manager Self-Hosted leader (single node) as a container.
+# Follows the official CyberArk docs:
+#   https://docs.cyberark.com/secrets-manager-sh/latest/en/content/deployment/dap/dap-before-deploy-vm.htm
+#   https://docs.cyberark.com/secrets-manager-sh/latest/en/content/deployment/dap/dap-deploy-dap.htm
+# Usage (as root):
+#   ./10-install-leader.sh "/home/skytap/Secrets Manager Self-Hosted Appliance/conjur-appliance-Rls-v13.10.0.tar.gz"
 source "$(dirname "$0")/../common/lib.sh"
 [[ $EUID -eq 0 ]] || die "run as root"
 TARBALL="${1:-}"
@@ -23,16 +26,29 @@ else
   [[ -n "$IMAGE" ]] || die "could not read image name from docker load"
   ok "image $IMAGE"
 
-  log "Starting $NAME"
+  log "Folders and config file (per CyberArk docs: dap-before-deploy-vm)"
   mkdir -p /opt/cyberark/conjur/{security,config,backups,seeds,logs}
-  docker run --name "$NAME" -d --restart=unless-stopped \
-    --security-opt seccomp=unconfined \
-    -p 443:443 -p 444:444 -p 5432:5432 -p 1999:1999 \
-    -v /opt/cyberark/conjur/security:/opt/cyberark/conjur/security \
-    -v /opt/cyberark/conjur/config:/etc/conjur/config \
-    -v /opt/cyberark/conjur/backups:/opt/conjur/backup \
-    -v /opt/cyberark/conjur/seeds:/opt/cyberark/conjur/seeds \
-    -v /opt/cyberark/conjur/logs:/var/log/conjur \
+  touch /opt/cyberark/conjur/config/conjur.yml
+  chmod o+x /opt/cyberark/conjur/config
+  chmod o+r /opt/cyberark/conjur/config/conjur.yml
+
+  log "Seccomp profile shipped inside the image (adds keyring calls to Docker's default)"
+  docker run --rm --entrypoint /bin/cat "$IMAGE" /usr/share/doc/conjur/examples/seccomp.json \
+    > /opt/cyberark/conjur/security/seccomp.json
+  ok "/opt/cyberark/conjur/security/seccomp.json"
+
+  log "Starting $NAME"
+  docker network inspect conjur >/dev/null 2>&1 || docker network create conjur >/dev/null
+  docker run --name "$NAME" --detach --restart unless-stopped \
+    --network conjur --network-alias "$CONJUR_HOST" \
+    --security-opt seccomp=/opt/cyberark/conjur/security/seccomp.json \
+    --publish "443:443" --publish "444:444" --publish "5432:5432" --publish "1999:1999" \
+    --cap-add AUDIT_WRITE \
+    --log-driver journald \
+    --volume /opt/cyberark/conjur/config:/etc/conjur/config:z \
+    --volume /opt/cyberark/conjur/security:/opt/cyberark/conjur/security:z \
+    --volume /opt/cyberark/conjur/backups:/opt/conjur/backup:z \
+    --volume /opt/cyberark/conjur/logs:/var/log/conjur:z \
     "$IMAGE"
   sleep 10
 fi
@@ -44,7 +60,7 @@ else
   ensure_pw
   docker exec "$NAME" evoke configure leader --accept-eula \
     --hostname "$CONJUR_HOST" \
-    --leader-altnames "${CONJUR_HOST},$(hostname)" \
+    --leader-altnames "${CONJUR_HOST}" \
     --admin-password "$CONJUR_ADMIN_PASSWORD" \
     "$CONJUR_ACCOUNT"
 fi
