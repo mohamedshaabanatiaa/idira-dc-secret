@@ -15,23 +15,19 @@ k create namespace "$BOA_NS" --dry-run=client -o yaml | k apply -f -
 log "Applying JWT signing key (app login tokens, not a DB secret)"
 k -n "$BOA_NS" apply -f "$SRC/extras/jwt/jwt-secret.yaml"
 
-log "Applying manifests (skipping loadgenerator)"
+log "Applying manifests (skipping loadgenerator), Google Cloud tracing/metrics off"
+# The upstream manifests turn on Google Cloud Trace/Metrics, which crash off-GCP
+# (DefaultCredentialsError). We flip them to "false" before applying, so every
+# workload starts once, correctly, with no second rollout.
 for f in "$SRC"/kubernetes-manifests/*.yaml; do
   [[ "$(basename "$f")" == "loadgenerator.yaml" ]] && continue
-  k -n "$BOA_NS" apply -f "$f"
+  python3 - "$f" <<'PYEOF' | k -n "$BOA_NS" apply -f -
+import re, sys
+s = open(sys.argv[1]).read()
+s = re.sub(r'(- name: ENABLE_(?:TRACING|METRICS)\n\s+value: )"true"', r'\1"false"', s)
+print(s)
+PYEOF
 done
-
-log "Turning off Google Cloud tracing/metrics (they need GCP credentials and crash the pods off-GCP)"
-for d in userservice contacts frontend; do
-  k -n "$BOA_NS" set env deploy/$d ENABLE_TRACING=false ENABLE_METRICS=false >/dev/null
-done
-# Java (Spring) services: belt and braces, the GCP auto-config is switched off explicitly too
-for d in ledgerwriter balancereader transactionhistory; do
-  k -n "$BOA_NS" set env deploy/$d ENABLE_TRACING=false ENABLE_METRICS=false \
-    SPRING_CLOUD_GCP_TRACE_ENABLED=false SPRING_SLEUTH_ENABLED=false \
-    SPRING_CLOUD_GCP_CORE_ENABLED=false MANAGEMENT_TRACING_ENABLED=false >/dev/null
-done
-ok "tracing and metrics disabled"
 
 log "Waiting for pods (first pull takes a few minutes)"
 k -n "$BOA_NS" rollout status statefulset/accounts-db --timeout=600s
