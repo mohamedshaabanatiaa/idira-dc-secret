@@ -1,0 +1,84 @@
+# =============================================================================
+# prod.yml  -  Production: secrets, workload identities, and who can read what.
+# Load from the Windows CLI as admin (after root.yml):
+#     conjur policy load -b prod -f prod.yml
+#
+# Four building blocks:
+#   variable = a secret          host  = one workload identity
+#   layer    = a group of hosts  permit = "this layer may read + use these secrets"
+# Everything here lives under prod/ (e.g. prod/boa/accounts-db/password).
+# =============================================================================
+
+# ---------------------------------------------------------------- SECRETS
+- !variable boa/accounts-db/password       # Bank of Anthos
+- !variable boa/accounts-db/uri
+- !variable boa/ledger-db/password
+
+- !variable petstore/db/address            # Pet store
+- !variable petstore/db/username
+- !variable petstore/db/password
+
+- !variable cicd/kube-server               # Deploy access for pipelines
+- !variable cicd/kube-ca
+- !variable cicd/jenkins-token
+- !variable cicd/gitlab-token
+
+- !variable ai/anthropic-api-key           # Claude API key for agents
+
+# -------------------------------------------- IDENTITIES (hosts + layers)
+# Kubernetes pods (k3s on VM1). Host id = the pod's service account.
+- !layer k8s/boa
+- !layer k8s/petstore
+- !host k8s/system:serviceaccount:boa:secrets-provider
+- !host k8s/system:serviceaccount:petstore:petstore-app
+- !grant { role: !layer k8s/boa,      member: !host k8s/system:serviceaccount:boa:secrets-provider }
+- !grant { role: !layer k8s/petstore, member: !host k8s/system:serviceaccount:petstore:petstore-app }
+
+# Jenkins pipelines (VM2)
+- !layer jenkins/pipelines
+- !host jenkins/boa-deploy
+- !host jenkins/idira
+- !grant { role: !layer jenkins/pipelines, members: [ !host jenkins/boa-deploy, !host jenkins/idira ] }
+
+# GitLab pipelines (gitlab.com, runner on VM2). Only the main branch.
+- !layer gitlab/pipelines
+- !host
+  id: gitlab/mohamedshaabanatiaa/idira-petstore-deploy
+  annotations: { authn-jwt/gitlab/ref: main }
+- !grant { role: !layer gitlab/pipelines, member: !host gitlab/mohamedshaabanatiaa/idira-petstore-deploy }
+
+# AI agents (VM3). Their login key works only from VM3's IP.
+- !host
+  id: agents/support-agent
+  restricted_to: [ "10.0.0.5/32" ]
+- !host
+  id: agents/rogue-agent
+  restricted_to: [ "10.0.0.5/32" ]
+
+# ------------------------------------------- WHO CAN READ WHAT (the rules)
+- !permit
+  role: !layer k8s/boa
+  privileges: [ read, execute ]
+  resources: [ !variable boa/accounts-db/password, !variable boa/accounts-db/uri, !variable boa/ledger-db/password ]
+
+- !permit
+  role: !layer k8s/petstore
+  privileges: [ read, execute ]
+  resources: [ !variable petstore/db/address, !variable petstore/db/username, !variable petstore/db/password ]
+
+- !permit
+  role: !layer jenkins/pipelines
+  privileges: [ read, execute ]
+  resources: [ !variable cicd/kube-server, !variable cicd/kube-ca, !variable cicd/jenkins-token ]
+
+- !permit
+  role: !layer gitlab/pipelines
+  privileges: [ read, execute ]
+  resources: [ !variable cicd/kube-server, !variable cicd/kube-ca, !variable cicd/gitlab-token ]
+
+- !permit
+  role: !host agents/support-agent
+  privileges: [ read, execute ]
+  resources: [ !variable ai/anthropic-api-key ]
+
+# agents/rogue-agent: no rule. It can log in, it can read nothing.

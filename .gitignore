@@ -1,6 +1,6 @@
 vendor/
 .conjur-cert.pem
 *.key
-.authn.yml
-.bank.yml
+.authenticators.yml
+.prod.yml
 __pycache__/

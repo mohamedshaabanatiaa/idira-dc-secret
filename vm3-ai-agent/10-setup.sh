@@ -27,7 +27,7 @@ CONJUR_CERT=/etc/idira/conjur.pem
 PETSTORE_URL=http://${VM1_IP}:30080
 ENV
 
-log "Agent login keys (identities come from policies/bank.yml: prod/agents/*)"
+log "Agent login keys (identities come from policies/prod.yml: prod/agents/*)"
 
 for a in support-agent rogue-agent; do
   umask 077; conjur_host_key "prod/agents/$a" > "/etc/idira/$a.key"

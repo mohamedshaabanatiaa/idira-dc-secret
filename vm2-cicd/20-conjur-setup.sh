@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Connects Jenkins and GitLab to Secrets Manager with JWT (no stored API keys).
-# Prereqs: policies loaded (bank.yml, authn.yml), vm1-k8s/25-cicd-deployers.sh done,
+# Prereqs: policies loaded (prod.yml, authenticators.yml), vm1-k8s/25-cicd-deployers.sh done,
 #          Jenkins plugin configured for JWT (README).
 source "$(dirname "$0")/../common/lib.sh"
 need jq; need curl

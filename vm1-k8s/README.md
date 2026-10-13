@@ -40,7 +40,7 @@ The admin password is prompted once per run. Or `export CONJUR_ADMIN_PASSWORD=..
 
 ## What it uses in Secrets Manager
 
-Defined in `../policies/bank.yml` (loaded from the Windows CLI first):
+Defined in `../policies/prod.yml` (loaded from the Windows CLI first):
 
 ```
 prod/k8s/system:serviceaccount:boa:secrets-provider      host, layer prod/k8s/boa

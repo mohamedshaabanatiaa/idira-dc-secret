@@ -1,7 +1,7 @@
 # =============================================================================
-# authn.yml  -  How workloads prove who they are (signed JWTs, no passwords).
-# Load after bank.yml:
-#     conjur policy load -b root -f authn.yml
+# authenticators.yml  -  How workloads prove who they are (signed JWTs, no passwords).
+# Load last (after root.yml and prod.yml):
+#     conjur policy load -b root -f authenticators.yml
 # One authenticator per platform. Each trusts one issuer's signing keys.
 # =============================================================================
 

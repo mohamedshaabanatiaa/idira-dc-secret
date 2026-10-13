@@ -1,0 +1,14 @@
+# =============================================================================
+# root.yml  -  The bank's environments. Load first, from the Windows CLI as admin:
+#     conjur policy load -b root -f root.yml
+# Each environment is its own branch with its own file (prod.yml, dev.yml).
+# Nothing in prod is permitted on dev, so a prod workload can never read a dev
+# secret, and the reverse.
+# =============================================================================
+- !policy
+  id: prod
+  annotations: { environment: production }
+
+- !policy
+  id: dev
+  annotations: { environment: development }

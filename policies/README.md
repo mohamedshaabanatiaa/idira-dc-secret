@@ -1,11 +1,14 @@
 # Policy: the bank's secrets model
 
-Two files. Loaded by Security from the Windows CLI, as admin. Scripts never load policy, they only set values.
+Three files, one per concern. Loaded by Security from the Windows CLI, as admin, in this order. Scripts never load policy, they only set values.
 
 ```powershell
-conjur policy load -b root -f bank.yml     # environments, secrets, identities, rules
-conjur policy load -b root -f authn.yml    # login doors (JWT authenticators)
+conjur policy load -b root -f root.yml               # the environments: prod, dev
+conjur policy load -b prod -f prod.yml               # prod secrets, identities, rules
+conjur policy load -b root -f authenticators.yml     # login doors (JWT authenticators)
 ```
+
+Why separate files: each environment can get its own owner and review process (prod changes need approval, dev doesn't), and authenticators are platform plumbing owned by Security.
 
 ## The model in one picture
 

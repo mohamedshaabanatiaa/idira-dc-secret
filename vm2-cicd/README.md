@@ -50,7 +50,7 @@ Run `vm1-k8s/25-cicd-deployers.sh` within 2 hours of the demo (or `TOKEN_TTL=8h`
 
 ## GitLab steps (gitlab.com)
 
-1. Create project `idira-petstore-deploy` under your user. If the path is not `mohamedshaabanatiaa/idira-petstore-deploy`, change the gitlab host id in `../policies/bank.yml` and reload it.
+1. Create project `idira-petstore-deploy` under your user. If the path is not `mohamedshaabanatiaa/idira-petstore-deploy`, change the gitlab host id in `../policies/prod.yml` and reload it.
 2. **Settings > CI/CD > Runners > New project runner**: tag `idira-vm2`, *run untagged* off. Copy the `glrt-` token into `./11-install-gitlab-runner.sh`.
 3. Commit `gitlab/.gitlab-ci.yml` to the project root on `main`. The pipeline starts by itself.
 4. Bonus demo: push the same file on a branch `feature-x`. Same project, same runner, **denied**: policy only trusts `ref: main`.
@@ -60,6 +60,6 @@ Run `vm1-k8s/25-cicd-deployers.sh` within 2 hours of the demo (or `TOKEN_TTL=8h`
 | Symptom | Look at |
 |---|---|
 | Jenkins 401 | leader log `grep authn-jwt`; issuer mismatch -> rerun with `JENKINS_ISSUER='http://VM2_IP:8080/'`; host id must equal the `jenkins_name` claim |
-| GitLab 401 | host id in `policies/bank.yml` matches the project path exactly; job runs on `main`; leader can reach `gitlab.com` |
+| GitLab 401 | host id in `policies/prod.yml` matches the project path exactly; job runs on `main`; leader can reach `gitlab.com` |
 | kubectl `Unauthorized` | token expired: rerun `vm1-k8s/25-cicd-deployers.sh` (that is the rotation) |
 | kubectl x509 | k3s was installed before `--tls-san VM1_IP` was added: reinstall or use the node hostname |

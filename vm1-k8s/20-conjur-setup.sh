@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Connects k3s to Secrets Manager Self-Hosted.
-# Prereq: policies/bank.yml and policies/authn.yml loaded from the Windows CLI.
+# Prereq: policies/prod.yml and policies/authenticators.yml loaded from the Windows CLI.
 #  1. trusts the leader certificate
 #  2. configures authn-jwt/k3s with this cluster's issuer + signing keys
 #  3. seeds the secrets with the CURRENT (original) values

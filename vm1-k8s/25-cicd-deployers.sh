@@ -3,7 +3,7 @@
 # namespace, and stores a SHORT-LIVED token for each in Secrets Manager.
 #   Jenkins -> can patch deployments in boa only
 #   GitLab  -> can patch deployments in petstore only
-# Secrets come from policies/bank.yml (prod/cicd/*).
+# Secrets come from policies/prod.yml (prod/cicd/*).
 # Re-run any time = rotation (new token, old one expires on its own).
 #   TOKEN_TTL=2h ./25-cicd-deployers.sh
 source "$(dirname "$0")/lib.sh"
