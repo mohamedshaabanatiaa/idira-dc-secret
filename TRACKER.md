@@ -43,6 +43,9 @@ Live state of the lab. **No passwords here** (tracked outside the repo).
 - Seccomp: CyberArk profile from the image, not `unconfined`.
 - `--leader-altnames` dropped: single node, hostname already in the cert.
 - Build every VM in its "before" state (hardcoded secrets) first, then migrate.
+- Rotation in the demo: manual scripts (`31` pet store, no restart; `30` BoA, rolling). Built-in rotator (`23`) not used, explained as the production option.
+- GitLab cut (2+ integrations already covered: BoA, pet store, Jenkins).
+- Policy kept simple: `root.yml`, `prod.yml`, `authenticators.yml`.
 
 ## Progress
 
