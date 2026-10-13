@@ -11,7 +11,7 @@ Live state of the lab. **No passwords here** (tracked outside the repo).
 
 | VM | Hostname | IP | Disk / | RAM | Role | Status |
 |---|---|---|---|---|---|---|
-| Windows jump host | | | | | Browser, Conjur CLI, MobaXterm | ok |
+| Windows jump host | | | | | Browser, Conjur CLI 9.3.0, MobaXterm | **CLI logged in as admin** |
 | Secrets Manager | ubn2510 | 10.0.0.2 | 37 GB (extended) | 15 GB | Leader | **leader up** |
 | DevOps VM1 | | | extend pending | | k3s + Bank of Anthos + pet store | pending |
 | DevOps VM2 | | | extend pending | | Jenkins + GitLab runner | pending |
@@ -31,7 +31,9 @@ Live state of the lab. **No passwords here** (tracked outside the repo).
 | Account | `bank` |
 | Admin user | `admin` |
 | Topology | single node (leader). Production: + 2 standbys, followers per cluster/region |
-| UI | `https://conjur-leader.bank.local` (Windows hosts file entry needed) |
+| UI | `https://conjur-leader.bank.local` (Windows hosts entry `10.0.0.2 conjur-leader.bank.local` added), admin login ok |
+| Windows CLI | `C:\Program Files\Conjur\conjur.exe` (from Desktop\Secrets Manager CLI, `conjur_windows_amd64.exe`), on PATH, `conjur init -u https://conjur-leader.bank.local -a bank --self-signed` |
+| Linux CLI | `conjur-cli_9.3.0_amd64.deb` in the same Desktop folder (copy to VMs via MobaXterm SFTP) |
 | Role in `/info` | `master` (= leader, legacy name in the API) |
 
 ## Decisions
@@ -45,7 +47,7 @@ Live state of the lab. **No passwords here** (tracked outside the repo).
 
 | Day | Done | Next |
 |---|---|---|
-| 1 (13 Oct) | Docker, leader installed + configured, disk extended on SM VM | Windows hosts + UI login, CLI on Windows, VM1 baseline |
+| 1 (13 Oct) | Docker, leader installed + configured, disk extended on SM VM, UI login, Windows CLI logged in | Disks + repo on VM1-3, VM1 baseline (k3s + apps), bank policy model |
 
 ## Issues log
 
