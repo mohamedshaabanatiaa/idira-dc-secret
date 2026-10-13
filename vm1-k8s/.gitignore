@@ -1,0 +1,4 @@
+vendor/
+.conjur-cert.pem
+.authn.yml
+.bank.yml

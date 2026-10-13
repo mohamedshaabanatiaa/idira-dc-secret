@@ -1,0 +1,24 @@
+# JWT authenticator that trusts the k3s service account token issuer.
+# Loaded into the root branch.
+- !policy
+  id: conjur/authn-jwt/__AUTHN_ID__
+  body:
+  - !webservice
+  - !variable public-keys
+  - !variable issuer
+  - !variable token-app-property
+  - !variable identity-path
+  - !variable audience
+
+  - !group apps
+  - !permit
+    role: !group apps
+    privilege: [ read, authenticate ]
+    resource: !webservice
+
+  - !webservice status
+  - !group operators
+  - !permit
+    role: !group operators
+    privilege: [ read ]
+    resource: !webservice status
