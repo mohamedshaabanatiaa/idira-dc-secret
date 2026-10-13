@@ -25,6 +25,12 @@ for f in "$SRC"/kubernetes-manifests/*.yaml; do
 import re, sys
 s = open(sys.argv[1]).read()
 s = re.sub(r'(- name: ENABLE_(?:TRACING|METRICS)\n\s+value: )"true"', r'\1"false"', s)
+# Java services: this JDK crashes reading cgroup v2 on newer kernels (Ubuntu 25.10)
+# -> NullPointerException in CgroupV2Subsystem. Turn off JVM container detection
+# and size the heap explicitly instead.
+if "JVM_OPTS" in s:
+    s = re.sub(r'(\n(\s+)- name: ENABLE_METRICS\n\s+value: "false")',
+               r'\1\n\2- name: JAVA_TOOL_OPTIONS\n\2  value: "-XX:-UseContainerSupport -Xms256m -Xmx512m"', s, count=1)
 print(s)
 PYEOF
 done
