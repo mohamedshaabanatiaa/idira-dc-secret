@@ -56,4 +56,5 @@ Live state of the lab. **No passwords here** (tracked outside the repo).
 | 13 Oct | `/` only 19 GB of a 40 GB disk (Ubuntu LVM default) | `lvextend -r -l +100%FREE /dev/ubuntu-vg/ubuntu-lv` |
 | 13 Oct | `evoke configure leader`: "leader altnames not valid" | removed `--leader-altnames` |
 | 13 Oct | all VMs shipped with hostname `ubn2510` | renamed sm/vm1/vm2/vm3, `/etc/hosts` on each |
+| 13 Oct | Bank of Anthos pods crash: `DefaultCredentialsError` (Google Cloud Trace on by default) | `kubectl set env ... ENABLE_TRACING=false ENABLE_METRICS=false`, now in `10-install-boa.sh` |
 | 13 Oct | nginx "cannot load certificate" during configure | harmless, cert created later in the run |

@@ -21,6 +21,12 @@ for f in "$SRC"/kubernetes-manifests/*.yaml; do
   k -n "$BOA_NS" apply -f "$f"
 done
 
+log "Turning off Google Cloud tracing/metrics (they need GCP credentials and crash the pods off-GCP)"
+for d in userservice contacts ledgerwriter balancereader transactionhistory frontend; do
+  k -n "$BOA_NS" set env deploy/$d ENABLE_TRACING=false ENABLE_METRICS=false >/dev/null
+done
+ok "tracing and metrics disabled"
+
 log "Waiting for pods (first pull takes a few minutes)"
 k -n "$BOA_NS" rollout status statefulset/accounts-db --timeout=600s
 k -n "$BOA_NS" rollout status statefulset/ledger-db --timeout=600s
