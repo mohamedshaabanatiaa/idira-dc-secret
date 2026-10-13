@@ -7,15 +7,15 @@ Live state of the lab. **No passwords here** (tracked outside the repo).
 | Item | Value | Status |
 |---|---|---|
 | Access | MobaXterm on the Windows jump host, SSH as `skytap`, then `sudo -i` | ok |
-| Repo on VMs | `/opt/idira` (private, read-only GitHub token) | pending |
+| Repo on VMs | `/opt/idira` (private, read-only GitHub token) | cloned on VM1-3 |
 
 | VM | Hostname | IP | Disk / | RAM | Role | Status |
 |---|---|---|---|---|---|---|
 | Windows jump host | | | | | Browser, Conjur CLI 9.3.0, MobaXterm | **CLI logged in as admin** |
-| Secrets Manager | ubn2510 | 10.0.0.2 | 37 GB (extended) | 15 GB | Leader | **leader up** |
-| DevOps VM1 | | | extend pending | | k3s + Bank of Anthos + pet store | pending |
-| DevOps VM2 | | | extend pending | | Jenkins + GitLab runner | pending |
-| DevOps VM3 | | | extend pending | | AI agent | pending |
+| Secrets Manager | sm (was ubn2510) | 10.0.0.2 | 37 GB (extended) | 15 GB | Leader | **leader up** |
+| DevOps VM1 | vm1 (was ubn2510) | 10.0.0.3 | extended | | k3s + Bank of Anthos + pet store | repo cloned |
+| DevOps VM2 | vm2 (was ubn2510) | 10.0.0.1 | extended | | Jenkins + GitLab runner | repo cloned |
+| DevOps VM3 | vm3 (was ubn2510) | 10.0.0.5 | extended | | AI agent | repo cloned |
 
 ## Secrets Manager
 
@@ -55,4 +55,5 @@ Live state of the lab. **No passwords here** (tracked outside the repo).
 |---|---|---|
 | 13 Oct | `/` only 19 GB of a 40 GB disk (Ubuntu LVM default) | `lvextend -r -l +100%FREE /dev/ubuntu-vg/ubuntu-lv` |
 | 13 Oct | `evoke configure leader`: "leader altnames not valid" | removed `--leader-altnames` |
+| 13 Oct | all VMs shipped with hostname `ubn2510` | renamed sm/vm1/vm2/vm3, `/etc/hosts` on each |
 | 13 Oct | nginx "cannot load certificate" during configure | harmless, cert created later in the run |
