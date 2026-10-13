@@ -20,9 +20,12 @@ data:
         connector: pg
         listenOn: tcp://localhost:5432
         credentials:
-          address:
+          host:
             from: conjur
-            get: prod/petstore/db/address
+            get: prod/petstore/db/host
+          port:
+            from: conjur
+            get: prod/petstore/db/port
           username:
             from: conjur
             get: prod/petstore/db/username

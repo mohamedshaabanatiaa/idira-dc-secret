@@ -14,7 +14,8 @@
 - !variable boa/accounts-db/uri
 - !variable boa/ledger-db/password
 
-- !variable petstore/db/address            # Pet store
+- !variable petstore/db/host               # Pet store
+- !variable petstore/db/port
 - !variable petstore/db/username
 - !variable petstore/db/password
 
@@ -76,7 +77,7 @@
 - !permit
   role: !layer k8s/petstore
   privileges: [ read, execute ]
-  resources: [ !variable petstore/db/address, !variable petstore/db/username, !variable petstore/db/password ]
+  resources: [ !variable petstore/db/host, !variable petstore/db/port, !variable petstore/db/username, !variable petstore/db/password ]
 
 - !permit
   role: !layer jenkins/pipelines

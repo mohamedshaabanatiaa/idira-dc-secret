@@ -46,7 +46,7 @@ Defined in `../policies/prod.yml` (loaded from the Windows CLI first):
 prod/k8s/system:serviceaccount:boa:secrets-provider      host, layer prod/k8s/boa
 prod/k8s/system:serviceaccount:petstore:petstore-app     host, layer prod/k8s/petstore
 prod/boa/accounts-db/{password,uri}, prod/boa/ledger-db/password
-prod/petstore/db/{address,username,password}
+prod/petstore/db/{host,port,username,password}
 ```
 
 Each layer can read only its own app's secrets. Identity comes from the Kubernetes service account token (audience `conjur`), so there is no API key anywhere in the cluster.
