@@ -50,6 +50,11 @@ Live state of the lab. **No passwords here** (tracked outside the repo).
 |---|---|---|
 | 1 (13 Oct) | Docker, leader installed + configured, disk extended on all VMs, UI login, Windows CLI logged in, hostnames, repo on VM1-3, k3s, Bank of Anthos (2 fixes), pet store, policy loaded, authenticators enabled, VM1 connected, **Bank of Anthos migrated to Secrets Manager** | Pet store -> Secretless (22), then rotation |
 
+| 2 (14 Oct) | | After resume: clock check on all VMs. Pet store -> Secretless (22). Rotation (30, 31, 23). VM2 Jenkins + GitLab runner |
+| 3 (15 Oct) | | Connect Jenkins + GitLab (20), VM3 agent, audit view |
+| 4 (16 Oct) | | Rehearse: revert to before state, full run, deck |
+| 5 (17 Oct) | | Buffer and slides |
+
 ## Issues log
 
 | When | Issue | Fix |
