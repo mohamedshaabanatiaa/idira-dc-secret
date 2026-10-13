@@ -22,8 +22,14 @@ for f in "$SRC"/kubernetes-manifests/*.yaml; do
 done
 
 log "Turning off Google Cloud tracing/metrics (they need GCP credentials and crash the pods off-GCP)"
-for d in userservice contacts ledgerwriter balancereader transactionhistory frontend; do
+for d in userservice contacts frontend; do
   k -n "$BOA_NS" set env deploy/$d ENABLE_TRACING=false ENABLE_METRICS=false >/dev/null
+done
+# Java (Spring) services: belt and braces, the GCP auto-config is switched off explicitly too
+for d in ledgerwriter balancereader transactionhistory; do
+  k -n "$BOA_NS" set env deploy/$d ENABLE_TRACING=false ENABLE_METRICS=false \
+    SPRING_CLOUD_GCP_TRACE_ENABLED=false SPRING_SLEUTH_ENABLED=false \
+    SPRING_CLOUD_GCP_CORE_ENABLED=false MANAGEMENT_TRACING_ENABLED=false >/dev/null
 done
 ok "tracing and metrics disabled"
 
