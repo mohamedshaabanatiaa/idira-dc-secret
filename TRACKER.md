@@ -13,7 +13,7 @@ Live state of the lab. **No passwords here** (tracked outside the repo).
 |---|---|---|---|---|---|---|
 | Windows jump host | | | | | Browser, Conjur CLI 9.3.0, MobaXterm | **CLI logged in as admin** |
 | Secrets Manager | sm (was ubn2510) | 10.0.0.2 | 37 GB (extended) | 15 GB | Leader | **leader up** |
-| DevOps VM1 | vm1 (was ubn2510) | 10.0.0.3 | extended | 4 CPU | k3s + Bank of Anthos + pet store | **k3s up, Bank of Anthos running (before state)** |
+| DevOps VM1 | vm1 (was ubn2510) | 10.0.0.3 | extended | 4 CPU | k3s + Bank of Anthos + pet store | **k3s, Bank of Anthos and pet store running (before state)** |
 | DevOps VM2 | vm2 (was ubn2510) | 10.0.0.1 | extended | | Jenkins + GitLab runner | repo cloned |
 | DevOps VM3 | vm3 (was ubn2510) | 10.0.0.5 | extended | | AI agent | repo cloned |
 
@@ -47,7 +47,7 @@ Live state of the lab. **No passwords here** (tracked outside the repo).
 
 | Day | Done | Next |
 |---|---|---|
-| 1 (13 Oct) | Docker, leader installed + configured, disk extended on all VMs, UI login, Windows CLI logged in, hostnames, repo on VM1-3, k3s, Bank of Anthos (2 fixes) | Pet store, bank policy model |
+| 1 (13 Oct) | Docker, leader installed + configured, disk extended on all VMs, UI login, Windows CLI logged in, hostnames, repo on VM1-3, k3s, Bank of Anthos (2 fixes), pet store | Bank policy model (environments, apps, hosts, layers), then connect VM1 to Secrets Manager |
 
 ## Issues log
 
