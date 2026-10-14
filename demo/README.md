@@ -7,24 +7,21 @@ Each script only calls the build scripts we already have, plus plain kubectl.
 
 | When | Script | What it does |
 |---|---|---|
-| Only to rehearse from scratch | `./00-reset.sh` | Both apps back to hardcoded passwords |
-| Only after a reset | `./01-prepare.sh` | Migrates both apps to Secrets Manager |
+| 30 to 60 min before | `./00-reset.sh` | Both apps back to hardcoded passwords |
+| Live in Loop 1 (or before, if you skip the live migration) | `./01-prepare.sh` | Migrates both apps to Secrets Manager |
 | 10 min before | `./02-preflight.sh` | Clock, login, fresh 2h Jenkins tokens, agents and apps Running |
 
 Open beforehand: the Secrets Manager UI (logged in), Jenkins, the Bank of Anthos page, and a terminal on the Secrets Manager VM.
 
-## During the panel
+## During the panel: three loops (questions, demo, questions)
 
-| Step | Script | Say |
+Full questions and lines are in the speaker notes of the "Three problems" slide.
+
+| Loop | Scripts | Say |
 |---|---|---|
-| 1. No hardcoded secrets | `./10-show-secrets.sh` (prints each kubectl command, then its output) | "No password in any ConfigMap or Deployment. Only paths to Secrets Manager." |
-| 1. Proof it works | Log in to Bank of Anthos, send a payment | "Not one line of code changed." |
-| 2. Rotation | `./20-rotate.sh` | "New password. Same pod. No restart." |
-| 3. Jenkins | `./30-jenkins.sh` (shows the steps), run in the Jenkins UI | "2-hour token, one namespace only." |
-| 4. AI agent | `./40-agent-chat.sh` | Ask for the pets, then try the prompt injection |
-| 4. AI agent | `./41-agent-rogue.sh` | "Real identity, no permission: blocked." |
-| 4. AI agent | `./42-agent-kill.sh off`, chat again, then `./42-agent-kill.sh on` | "One policy line cuts it off." |
-| 5. Audit | `./50-audit.sh`, then the UI, then on the **Secrets Manager VM**: `./secrets-manager/90-audit.sh petstore` | "Same file your SIEM ingests." |
+| 1. Secret sprawl | `./10-show-secrets.sh`, `./01-prepare.sh`, `./10-show-secrets.sh`, payment in Bank of Anthos, `./30-jenkins.sh` + Jenkins build | "3 of 3 readable" then "0 of 3. Not one line of code changed." |
+| 2. Rotation breaks things | `./20-rotate.sh`, UI version number, on the **Secrets Manager VM**: `./secrets-manager/90-audit.sh petstore` | "Same pod. No restart. Every change on record." |
+| 3. AI agents | `./40-agent-chat.sh`, `./41-agent-rogue.sh`, `./42-agent-kill.sh off` / `on`, `./50-audit.sh`, UI rogue-agent host | "The agent never had the key. One policy line cuts it off." |
 
 ## Likely question on step 1
 
