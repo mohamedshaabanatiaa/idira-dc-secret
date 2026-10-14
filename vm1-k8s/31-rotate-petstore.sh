@@ -4,6 +4,7 @@
 # valid after ALTER ROLE, so nothing breaks. --kick also drops open
 # connections to prove the new password is used immediately.
 source "$(dirname "$0")/lib.sh"
+conjur_ready
 NS="$PET_NS"
 NEW=$(new_password)
 IP=$(hostname -I | awk '{print $1}')
@@ -13,7 +14,7 @@ log "Rotating pet store DB password"
 # DB first, then Secrets Manager right after: the gap is one API call, and
 # only NEW connections opened inside that gap would retry.
 k -n "$NS" exec petstore-db-0 -- psql -U "$PET_DB_USER" -d "$PET_DB_NAME" -qc "ALTER ROLE \"${PET_DB_USER}\" WITH PASSWORD '${NEW}';"
-conjur_set prod/petstore/db/password "$NEW"
+conjur variable set -i prod/petstore/db/password -v "$NEW"
 ok "database and Secrets Manager updated"
 
 if [[ "${1:-}" == "--kick" ]]; then

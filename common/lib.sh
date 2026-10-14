@@ -30,54 +30,27 @@ fetch_cert() {
 }
 conjur_cert() { [[ -s "$CERT_FILE" ]] || fetch_cert; }
 
-ensure_pw() {
+ensure_pw() {   # only used by evoke configure leader on the Secrets Manager VM
   if [[ -z "${CONJUR_ADMIN_PASSWORD}" ]]; then
     read -r -s -p "Secrets Manager password for ${CONJUR_ADMIN_USER}: " CONJUR_ADMIN_PASSWORD; echo
     export CONJUR_ADMIN_PASSWORD
   fi
 }
 
-conjur_token() {
-  local api_key
-  api_key=$(curl -sS --fail --cacert "$CERT_FILE" \
-    --user "${CONJUR_ADMIN_USER}:${CONJUR_ADMIN_PASSWORD}" \
-    "${CONJUR_URL}/authn/${CONJUR_ACCOUNT}/login") || die "admin login failed"
-  curl -sS --fail --cacert "$CERT_FILE" -H "Accept-Encoding: base64" --data "$api_key" \
-    "${CONJUR_URL}/authn/${CONJUR_ACCOUNT}/${CONJUR_ADMIN_USER}/authenticate" || die "authenticate failed"
-}
-
-# conjur_policy <branch> <file> [POST|PATCH|PUT] : POST appends, PATCH can delete/revoke
-conjur_policy() {
-  conjur_cert; ensure_pw
-  local token; token=$(conjur_token)
-  curl -sS --fail --cacert "$CERT_FILE" -X "${3:-POST}" \
-    -H "Authorization: Token token=\"${token}\"" --data-binary @"$2" \
-    "${CONJUR_URL}/policies/${CONJUR_ACCOUNT}/policy/$1" || die "policy load failed: $2"
-  echo
-}
-
-conjur_set() {
-  conjur_cert; ensure_pw
-  local token; token=$(conjur_token)
-  curl -sS --fail --cacert "$CERT_FILE" -X POST \
-    -H "Authorization: Token token=\"${token}\"" --data-binary "$2" \
-    "${CONJUR_URL}/secrets/${CONJUR_ACCOUNT}/variable/$(urlenc "$1")" || die "set failed: $1 (is policies/prod.yml loaded? see policies/README.md)"
-  ok "set $1"
-}
-
-conjur_get() {
-  conjur_cert; ensure_pw
-  local token; token=$(conjur_token)
-  curl -sS --fail --cacert "$CERT_FILE" -H "Authorization: Token token=\"${token}\"" \
-    "${CONJUR_URL}/secrets/${CONJUR_ACCOUNT}/variable/$(urlenc "$1")"
-}
-
-# Rotates a host's API key and prints the new one: conjur_host_key <host-id>
-conjur_host_key() {
-  conjur_cert; ensure_pw
-  local token; token=$(conjur_token)
-  curl -sS --fail --cacert "$CERT_FILE" -X PUT -H "Authorization: Token token=\"${token}\"" \
-    "${CONJUR_URL}/authn/${CONJUR_ACCOUNT}/api_key?role=$(urlenc "host:$1")" || die "api key rotation failed: $1"
+# Makes sure the official Conjur CLI is installed and logged in as admin.
+# Everything after this uses the standard CLI commands:
+#   conjur variable set -i <id> -v <value>
+#   conjur variable get -i <id>
+#   conjur policy load|update -b <branch> -f <file>
+#   conjur host rotate-api-key -i <host-id>
+conjur_ready() {
+  command -v conjur >/dev/null || die "Conjur CLI missing. Copy conjur-cli_9.3.0_amd64.deb from the Windows Desktop 'Secrets Manager CLI' folder, then: dpkg -i conjur-cli_9.3.0_amd64.deb"
+  if ! conjur whoami >/dev/null 2>&1; then
+    log "Logging the Conjur CLI in to ${CONJUR_URL} as ${CONJUR_ADMIN_USER}"
+    conjur init -u "${CONJUR_URL}" -a "${CONJUR_ACCOUNT}" --self-signed --force
+    conjur login -i "${CONJUR_ADMIN_USER}"
+  fi
+  ok "Conjur CLI: $(conjur whoami | tr -d '\n' | head -c 120)"
 }
 
 # Renders a template: replaces __VAR__ with the value of $VAR for every __X__ found

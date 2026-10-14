@@ -8,6 +8,7 @@
 # Timebox this to 30 minutes on day 2. If it will not fire, 31-rotate-petstore.sh
 # shows the same outcome.
 source "$(dirname "$0")/lib.sh"
+conjur_ready
 NS="$PET_NS"; PORT=30432
 export ROTATION_TTL="${ROTATION_TTL:-PT5M}"
 [[ "${1:-}" == "--off" ]] && ROTATION_TTL="P10Y"
@@ -26,9 +27,9 @@ ok "NodePort ${PORT}"
 
 log "Rotation policy (ttl ${ROTATION_TTL})"
 render "$HERE/policies/petstore-native-rotation.yml.tmpl" > "$HERE/.rot.yml"
-conjur_policy prod "$HERE/.rot.yml" >/dev/null && ok "annotations set"
+conjur policy update -b prod -f "$HERE/.rot.yml" >/dev/null && ok "annotations set"
 rm -f "$HERE/.rot.yml"
-conjur_set prod/petstore/db/url "${VM1_IP}:${PORT}/${PET_DB_NAME}"
+conjur variable set -i prod/petstore/db/url -v "${VM1_IP}:${PORT}/${PET_DB_NAME}"
 
 cat <<MSG
 

@@ -25,6 +25,19 @@ git clone https://github.com/mohamedshaabanatiaa/idira-dc-secret.git /opt/idira
 cd /opt/idira
 ```
 
+## 1b. Install the Conjur CLI (VM1, VM2, VM3)
+
+The scripts use the official CLI (`conjur variable set`, `conjur policy load`, ...).
+The installer is on the Windows Desktop, folder **Secrets Manager CLI**: `conjur-cli_9.3.0_amd64.deb`.
+Copy it to each VM with the MobaXterm file panel (to `/root/`), then:
+
+```bash
+dpkg -i /root/conjur-cli_9.3.0_amd64.deb
+conjur --version
+```
+
+The first script that needs it runs `conjur init` and `conjur login -i admin` (asks your password once per VM).
+
 ## 2. Daily commands
 
 ```bash

@@ -4,12 +4,13 @@
 # No redeploy, no key rotation at Anthropic, one policy change, fully audited.
 source "$(dirname "$0")/../common/lib.sh"
 HERE="$(cd "$(dirname "$0")" && pwd)"
+conjur_ready
 f="$HERE/.ks.yml"
 case "${1:-}" in
   off) echo '- !deny { role: !host agents/support-agent, privileges: [ read, execute ], resource: !variable ai/anthropic-api-key }' > "$f"
-       conjur_policy prod "$f" PATCH >/dev/null; ok "support-agent cut off" ;;
+       conjur policy update -b prod -f "$f" >/dev/null; ok "support-agent cut off" ;;
   on)  echo '- !permit { role: !host agents/support-agent, privileges: [ read, execute ], resource: !variable ai/anthropic-api-key }' > "$f"
-       conjur_policy prod "$f" POST >/dev/null; ok "support-agent restored" ;;
+       conjur policy load -b prod -f "$f" >/dev/null; ok "support-agent restored" ;;
   *)   die "usage: $0 off|on" ;;
 esac
 rm -f "$f"

@@ -6,6 +6,7 @@
 source "$(dirname "$0")/../common/lib.sh"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 [[ $EUID -eq 0 ]] || die "run as root"
+conjur_ready
 APP=/opt/idira-agent
 ensure_hosts_entry
 
@@ -30,16 +31,16 @@ ENV
 log "Agent login keys (identities come from policies/prod.yml: prod/agents/*)"
 
 for a in support-agent rogue-agent; do
-  umask 077; conjur_host_key "prod/agents/$a" > "/etc/idira/$a.key"
+  umask 077; conjur host rotate-api-key -i "prod/agents/$a" > "/etc/idira/$a.key"
   ok "/etc/idira/$a.key (root only, works only from ${VM3_IP})"
 done
 
 log "Claude API key -> Secrets Manager"
-if conjur_get prod/ai/anthropic-api-key >/dev/null 2>&1; then
+if conjur variable get -i prod/ai/anthropic-api-key >/dev/null 2>&1; then
   ok "already stored (rerun with --new-key to replace)"
 fi
-if [[ "${1:-}" == "--new-key" ]] || ! conjur_get prod/ai/anthropic-api-key >/dev/null 2>&1; then
+if [[ "${1:-}" == "--new-key" ]] || ! conjur variable get -i prod/ai/anthropic-api-key >/dev/null 2>&1; then
   read -r -s -p "Paste the Claude API key (sk-ant-...): " AK; echo
-  conjur_set prod/ai/anthropic-api-key "$AK"; unset AK
+  conjur variable set -i prod/ai/anthropic-api-key -v "$AK"; unset AK
 fi
 ok "Ready: sudo $APP/venv/bin/python $APP/agent.py"

@@ -8,6 +8,7 @@
 #   3. ALTER the DB password          (open pooled connections stay valid)
 #   4. rolling restart                (new pod Ready with new password before old pod stops)
 source "$(dirname "$0")/lib.sh"
+conjur_ready
 NS="$BOA_NS"
 NEW=$(new_password)
 
@@ -15,13 +16,13 @@ if [[ "${1:-}" == "--ledger" ]]; then
   DB=ledger-db-0; C=postgres; USER_="$BOA_LEDGER_USER"; DBN="$BOA_LEDGER_DB"
   APPS="ledgerwriter balancereader transactionhistory"
   log "1. Secrets Manager: new ledger-db password"
-  conjur_set prod/boa/ledger-db/password "$NEW"
+  conjur variable set -i prod/boa/ledger-db/password -v "$NEW"
 else
   DB=accounts-db-0; C=accounts-db; USER_="$BOA_ACCOUNTS_USER"; DBN="$BOA_ACCOUNTS_DB"
   APPS="userservice contacts"
   log "1. Secrets Manager: new accounts-db password"
-  conjur_set prod/boa/accounts-db/password "$NEW"
-  conjur_set prod/boa/accounts-db/uri "postgresql://${USER_}:${NEW}@accounts-db:5432/${DBN}"
+  conjur variable set -i prod/boa/accounts-db/password -v "$NEW"
+  conjur variable set -i prod/boa/accounts-db/uri -v "postgresql://${USER_}:${NEW}@accounts-db:5432/${DBN}"
 fi
 
 log "2. Sync into Kubernetes Secrets"

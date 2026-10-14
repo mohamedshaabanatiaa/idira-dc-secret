@@ -7,6 +7,7 @@
 # Re-run any time = rotation (new token, old one expires on its own).
 #   TOKEN_TTL=2h ./25-cicd-deployers.sh
 source "$(dirname "$0")/lib.sh"
+conjur_ready
 TTL="${TOKEN_TTL:-2h}"
 
 
@@ -44,8 +45,8 @@ deployer jenkins-deployer "$BOA_NS"
 deployer gitlab-deployer "$PET_NS"
 
 log "Issuing ${TTL} tokens and storing them in Secrets Manager"
-conjur_set prod/cicd/kube-server "https://${VM1_IP}:6443"
-conjur_set prod/cicd/kube-ca "$(k config view --raw -o jsonpath='{.clusters[0].cluster.certificate-authority-data}' | base64 -d)"
-conjur_set prod/cicd/jenkins-token "$(k -n "$BOA_NS" create token jenkins-deployer --duration="$TTL")"
-conjur_set prod/cicd/gitlab-token "$(k -n "$PET_NS" create token gitlab-deployer --duration="$TTL")"
+conjur variable set -i prod/cicd/kube-server -v "https://${VM1_IP}:6443"
+conjur variable set -i prod/cicd/kube-ca -v "$(k config view --raw -o jsonpath='{.clusters[0].cluster.certificate-authority-data}' | base64 -d)"
+conjur variable set -i prod/cicd/jenkins-token -v "$(k -n "$BOA_NS" create token jenkins-deployer --duration="$TTL")"
+conjur variable set -i prod/cicd/gitlab-token -v "$(k -n "$PET_NS" create token gitlab-deployer --duration="$TTL")"
 ok "Tokens expire in ${TTL}. Nobody saw them, nothing stored in Jenkins or GitLab."
