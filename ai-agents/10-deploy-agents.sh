@@ -90,7 +90,7 @@ spec:
       containers:
       - name: agent
         image: python:3.12-slim
-        command: [ "sh", "-c", "pip install -q --no-cache-dir anthropic httpx requests && touch /tmp/ready && sleep infinity" ]
+        command: [ "sh", "-c", "pip install -q --no-cache-dir anthropic requests && touch /tmp/ready && sleep infinity" ]
         workingDir: /app
         env:
         - { name: PETSTORE_URL, value: "http://petstore.${PET_NS}.svc.cluster.local:8080" }
@@ -127,6 +127,7 @@ YAML
 log "Agents"
 agent_pod support-agent support-agent yes
 agent_pod rogue-agent   rogue-agent   no
+k -n "$NS" rollout restart deploy/support-agent deploy/rogue-agent >/dev/null   # pick up code changes
 k -n "$NS" rollout status deploy/support-agent --timeout=300s
 k -n "$NS" rollout status deploy/rogue-agent --timeout=300s
 ok "Ready. Chat: ./20-chat.sh   Rogue: ./21-rogue.sh   Kill switch: ./30-kill-switch.sh off|on"

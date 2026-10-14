@@ -10,7 +10,6 @@ import os
 import sys
 
 import anthropic
-import httpx
 import requests
 
 from idira import AccessDenied, get_secret, identity, mask
@@ -18,10 +17,14 @@ from idira import AccessDenied, get_secret, identity, mask
 MODEL = os.environ.get("AGENT_MODEL", "claude-sonnet-5-5")
 PETSTORE = os.environ["PETSTORE_URL"]
 
+# All Claude calls go through the Secretless sidecar on localhost:8080.
+# Only Claude traffic uses that proxy; the pet store and Secrets Manager do not.
+os.environ["HTTP_PROXY"] = os.environ["http_proxy"] = "http://localhost:8080"
+os.environ["NO_PROXY"] = os.environ["no_proxy"] = ".svc.cluster.local,.bank.local,localhost,127.0.0.1"
 claude = anthropic.Anthropic(
     base_url="http://api.anthropic.com",          # Secretless upgrades this to https
     api_key="injected-by-secretless",             # placeholder, replaced in the sidecar
-    http_client=httpx.Client(proxy="http://localhost:8080", timeout=60),
+    timeout=60,
 )
 
 TOOLS = [
