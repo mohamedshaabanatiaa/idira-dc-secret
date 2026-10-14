@@ -7,5 +7,5 @@ Show in the console log:
   2. 2h deploy token fetched
   3. bank name changed on Bank of Anthos
   4. pet store namespace: Forbidden
-Token expired? run ./01-preflight.sh again (or vm1-k8s/25-cicd-deployers.sh)
+Token expired? run ./02-preflight.sh again (or vm1-k8s/25-cicd-deployers.sh)
 TXT

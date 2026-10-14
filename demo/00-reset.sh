@@ -5,4 +5,4 @@ set -e
 D="$(cd "$(dirname "$0")/../vm1-k8s" && pwd)"
 "$D/40-revert-boa.sh"
 "$D/41-revert-petstore.sh"
-echo; echo "Reset done. Next: ./01-preflight.sh"
+echo; echo "Reset done. Next: ./01-prepare.sh then ./02-preflight.sh"
