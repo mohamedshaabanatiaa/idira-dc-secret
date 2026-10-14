@@ -16,7 +16,7 @@ conjur_set conjur/authn-jwt/jenkins/public-keys "{\"type\":\"jwks\",\"value\":${
 conjur_set conjur/authn-jwt/jenkins/issuer "$JENKINS_ISSUER"
 conjur_set conjur/authn-jwt/jenkins/token-app-property "jenkins_name"
 conjur_set conjur/authn-jwt/jenkins/identity-path "prod/jenkins"
-conjur_set conjur/authn-jwt/jenkins/audience "conjur"
+conjur_set conjur/authn-jwt/jenkins/audience "cyberark-conjur"   # Jenkins plugin default
 
 log "GitLab authenticator (leader fetches gitlab.com keys itself)"
 conjur_set conjur/authn-jwt/gitlab/jwks-uri "https://gitlab.com/oauth/discovery/keys"

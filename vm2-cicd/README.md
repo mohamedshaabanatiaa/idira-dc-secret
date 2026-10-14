@@ -34,7 +34,7 @@ Run `vm1-k8s/25-cicd-deployers.sh` within 2 hours of the demo (or `TOKEN_TTL=8h`
    - Account: `bank` (your `CONJUR_ACCOUNT`)
    - Appliance URL: `https://<CONJUR_HOST>`
    - SSL certificate: `conjur-cert`
-   - **JWT Authentication**: Service ID `authn-jwt/jenkins`, Audience `conjur`, Signing Key Lifetime `10080`, Token Duration `120`, *Enable Identity Format Fields* **off**
+   - **JWT Authentication**: Service ID `authn-jwt/jenkins`, Audience `cyberark-conjur` (plugin default), Signing Key Lifetime `10080`, Token Duration `120`, *Enable Identity Format Fields* **off**
    - Save. Check `curl http://localhost:8080/jwtauth/conjur-jwk-set` on VM2 returns keys.
 3. **New Item > Folder** named `idira`.
 4. Inside the folder: **Credentials > Add**, kind **Secrets Manager Secret Credentials**, three times:
