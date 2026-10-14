@@ -8,7 +8,7 @@ Rule for the demo: **nothing breaks**. Every rotation below keeps the app answer
 | 2 | Pet store DB password (fallback) | Script: ALTER ROLE, then Secrets Manager | None, same pod | `vm1-k8s/31-rotate-petstore.sh` | If #1 is not firing |
 | 3 | Bank of Anthos DB passwords | Script: Secrets Manager, sync, ALTER, rolling restart | None. New pod Ready before old pod stops | `vm1-k8s/30-rotate-boa.sh [--ledger]` | Yes, short. The "apps you can't touch" story |
 | 4 | Jenkins/GitLab deploy tokens | Short-lived by design (2h). Re-issue = rotation, old one dies by itself | None. Next pipeline run fetches the new one | `vm1-k8s/25-cicd-deployers.sh` | Mention, don't run |
-| 5 | Claude API key | Replace the value in Secrets Manager | None. Agent fetches it every turn | `vm3-ai-agent/10-setup.sh --new-key` | Mention with the kill switch |
+| 5 | Claude API key | Replace the value in Secrets Manager | None. Secretless fetches it on every call | `ai-agents/10-deploy-agents.sh --new-key` | Mention with the kill switch |
 
 ## Why each one doesn't break the app
 
