@@ -32,5 +32,5 @@ Open beforehand: the Secrets Manager UI (logged in), Jenkins, the Bank of Anthos
 
 ## If something breaks
 
-- Jenkins token expired: `./02-preflight.sh` again.
+- Jenkins "must be logged in to the server": token expired or the namespace was reset. `./30-jenkins.sh` refreshes it, then build again.
 - Pod not Running: `kubectl -n <ns> get pods`, then switch to the recorded backup video.
