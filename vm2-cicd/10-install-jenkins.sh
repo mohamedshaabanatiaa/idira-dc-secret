@@ -17,7 +17,7 @@ ok "$(java -version 2>&1 | head -1), kubectl $(kubectl version --client -o json 
 if ! command -v jenkins >/dev/null && [[ ! -d /usr/share/java/jenkins.war && ! -f /usr/share/java/jenkins.war ]]; then
   log "Jenkins LTS repo"
   mkdir -p /etc/apt/keyrings
-  curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key -o /etc/apt/keyrings/jenkins-keyring.asc
+  curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2026.key -o /etc/apt/keyrings/jenkins-keyring.asc
   echo "deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/" \
     > /etc/apt/sources.list.d/jenkins.list
   apt-get update -qq || die "Jenkins repo key rejected? check https://pkg.jenkins.io/debian-stable/ for the current key"

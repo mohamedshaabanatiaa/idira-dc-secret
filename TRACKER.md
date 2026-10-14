@@ -69,4 +69,5 @@ Live state of the lab. **No passwords here** (tracked outside the repo).
 | 13 Oct | BoA Java services: `NullPointerException ... CgroupV2Subsystem` (JDK in image can't read Ubuntu 25.10 cgroup v2) | `JAVA_TOOL_OPTIONS=-XX:-UseContainerSupport -Xms256m -Xmx512m` injected by `10-install-boa.sh` |
 | 13 Oct | Secrets Provider 401: leader log `CONJ00099E Role must have at least one relevant annotation` | every JWT host needs at least one claim annotation: added `authn-jwt/k3s/kubernetes.io/namespace` + `serviceaccount/name` (and `jenkins_full_name` for Jenkins) in `prod.yml` |
 | 13 Oct | Pet store app crash: Secretless `lookup tcp/5432/test_app: unknown port` (`address` is deprecated in the pg connector) | variables `prod/petstore/db/host` + `port` instead of `address` (prod.yml, 20, 22). Secretless itself authenticated OK |
+| 14 Oct | Jenkins apt repo: `NO_PUBKEY 7198F4B714ABFC68` | Jenkins rotated its repo signing key: `jenkins.io-2026.key` (was 2023) in `10-install-jenkins.sh` |
 | 13 Oct | nginx "cannot load certificate" during configure | harmless, cert created later in the run |
