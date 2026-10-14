@@ -55,7 +55,7 @@ Live state of the lab. **No passwords here** (tracked outside the repo).
 |---|---|---|
 | 1 (13 Oct) | Docker, leader installed + configured, disk extended on all VMs, UI login, Windows CLI logged in, hostnames, repo on VM1-3, k3s, Bank of Anthos (2 fixes), pet store, policy loaded, authenticators enabled, VM1 connected, **Bank of Anthos and pet store migrated, pet store rotation without restart (31) verified** | BoA rotation (30), Jenkins on VM2 |
 
-| 2 (14 Oct) | CLI on VMs, scripts on official CLI, Jenkins + plugin, deploy tokens, Jenkins pipeline working (3rd integration) | After resume: clock check on all VMs. Pet store -> Secretless (22). Rotation (30, 31, 23). VM2 Jenkins + GitLab runner |
+| 2 (14 Oct) | CLI on VMs, scripts on official CLI, Jenkins + plugin, deploy tokens, Jenkins pipeline working (3rd integration), **AI agent pod working: signed identity, Claude key injected by Secretless** | After resume: clock check on all VMs. Pet store -> Secretless (22). Rotation (30, 31, 23). VM2 Jenkins + GitLab runner |
 | 3 (15 Oct) | | **Next, in order:** 1) AI agents: `git pull` on VM1, Windows `conjur policy update -b prod -f prod.yml` and `-b root -f authenticators.yml`, then `ai-agents/10-deploy-agents.sh`, chat, rogue, kill switch. 2) Audit trail walk-through (UI + CLI). 3) Slides final pass. **Tentative, only if time:** Ansible integration, SPIFFE (SPIRE) agent identity on VM3 (2h cap) |
 | 4 (16 Oct) | | Rehearse: revert to before state, full run, deck |
 | 5 (17 Oct) | | Buffer and slides |
@@ -71,6 +71,7 @@ Live state of the lab. **No passwords here** (tracked outside the repo).
 | 13 Oct | BoA Java services: `NullPointerException ... CgroupV2Subsystem` (JDK in image can't read Ubuntu 25.10 cgroup v2) | `JAVA_TOOL_OPTIONS=-XX:-UseContainerSupport -Xms256m -Xmx512m` injected by `10-install-boa.sh` |
 | 13 Oct | Secrets Provider 401: leader log `CONJ00099E Role must have at least one relevant annotation` | every JWT host needs at least one claim annotation: added `authn-jwt/k3s/kubernetes.io/namespace` + `serviceaccount/name` (and `jenkins_full_name` for Jenkins) in `prod.yml` |
 | 13 Oct | Pet store app crash: Secretless `lookup tcp/5432/test_app: unknown port` (`address` is deprecated in the pg connector) | variables `prod/petstore/db/host` + `port` instead of `address` (prod.yml, 20, 22). Secretless itself authenticated OK |
+| 14 Oct | Agent: `TypeError ... this SDK uses httpx2` (Claude SDK switched HTTP library) | route Claude calls via `HTTP_PROXY=localhost:8080` env + `NO_PROXY` for cluster/leader, no custom client |
 | 14 Oct | Pipeline `dial tcp 10.0.0.3:6443: i/o timeout` (Secrets Manager part already OK) | VM1 firewall: `ufw allow 6443/tcp` (VM2: 8080) |
 | 14 Oct | Jenkins plugin SSL certificate drop-down empty; Certificate credential needs a private key (`expected one key got 0`) | leader cert + CA imported into Java `cacerts` on VM2 (`keytool -importcert -cacerts`), plugin cert field left empty. Plugin JWT audience left at default `cyberark-conjur` |
 | 14 Oct | Jenkins apt repo: `NO_PUBKEY 7198F4B714ABFC68` | Jenkins rotated its repo signing key: `jenkins.io-2026.key` (was 2023) in `10-install-jenkins.sh` |
