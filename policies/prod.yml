@@ -60,13 +60,24 @@
   annotations: { authn-jwt/gitlab/ref: main }
 - !grant { role: !layer gitlab/pipelines, member: !host gitlab/mohamedshaabanatiaa/idira-petstore-deploy }
 
-# AI agents (VM3). Their login key works only from VM3's IP.
+# AI agents: pods in namespace "agents" on k3s. Same signed identity as any pod,
+# one service account per agent. No API key anywhere.
+- !layer k8s/agents
 - !host
-  id: agents/support-agent
-  restricted_to: [ "10.0.0.5/32" ]
+  id: k8s/system:serviceaccount:agents:support-agent
+  annotations:
+    authn-jwt/k3s/kubernetes.io/namespace: agents
+    authn-jwt/k3s/kubernetes.io/serviceaccount/name: support-agent
 - !host
-  id: agents/rogue-agent
-  restricted_to: [ "10.0.0.5/32" ]
+  id: k8s/system:serviceaccount:agents:rogue-agent
+  annotations:
+    authn-jwt/k3s/kubernetes.io/namespace: agents
+    authn-jwt/k3s/kubernetes.io/serviceaccount/name: rogue-agent
+- !grant
+  role: !layer k8s/agents
+  members:
+  - !host k8s/system:serviceaccount:agents:support-agent
+  - !host k8s/system:serviceaccount:agents:rogue-agent
 
 # ------------------------------------------- WHO CAN READ WHAT (the rules)
 - !permit
@@ -90,8 +101,8 @@
   resources: [ !variable cicd/kube-server, !variable cicd/kube-ca, !variable cicd/gitlab-token ]
 
 - !permit
-  role: !host agents/support-agent
+  role: !host k8s/system:serviceaccount:agents:support-agent
   privileges: [ read, execute ]
   resources: [ !variable ai/anthropic-api-key ]
 
-# agents/rogue-agent: no rule. It can log in, it can read nothing.
+# rogue-agent: no rule. It can log in, it can read nothing.

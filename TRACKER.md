@@ -15,7 +15,7 @@ Live state of the lab. **No passwords here** (tracked outside the repo).
 | Secrets Manager | sm (was ubn2510) | 10.0.0.2 | 37 GB (extended) | 15 GB | Leader | **leader up** |
 | DevOps VM1 | vm1 (was ubn2510) | 10.0.0.3 | extended | 4 CPU | k3s + Bank of Anthos + pet store | **Bank of Anthos (Secrets Provider job) and pet store (Secretless sidecar) on Secrets Manager** |
 | DevOps VM2 | vm2 (was ubn2510) | 10.0.0.1 | extended | | Jenkins (GitLab cut) | **Jenkins pipeline `idira/boa-deploy` works: JWT login, 2h deploy token, bank renamed** |
-| DevOps VM3 | vm3 (was ubn2510) | 10.0.0.5 | extended | | AI agent | repo cloned |
+| DevOps VM3 | vm3 (was ubn2510) | 10.0.0.5 | extended | | spare (agents moved to k3s pods) | repo cloned |
 
 ## Secrets Manager
 
@@ -46,6 +46,8 @@ Live state of the lab. **No passwords here** (tracked outside the repo).
 - Rotation in the demo: manual scripts (`31` pet store, no restart; `30` BoA, rolling). Built-in rotator (`23`) not used, explained as the production option.
 - GitLab cut (2+ integrations already covered: BoA, pet store, Jenkins).
 - Policy kept simple: `root.yml`, `prod.yml`, `authenticators.yml`.
+- AI agents run as pods on k3s with their own service accounts (signed identity via authn-jwt/k3s), not a static API key on VM3. Secretless generic HTTP connector injects the Claude key, so the agent program never holds it.
+- Scripts use the official Conjur CLI (`conjur variable set`, `policy load/update`).
 
 ## Progress
 

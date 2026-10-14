@@ -8,7 +8,7 @@ Idira Secrets technical challenge lab (Skytap, 5 VMs). One folder per VM.
 | `secrets-manager/` | Secrets Manager VM | Self-Hosted leader install, authenticator allowlist, audit | ready to test |
 | `vm1-k8s/` | DevOps VM1 | k3s, Bank of Anthos, pet store, migrate, rotate, revert | ready to test |
 | `vm2-cicd/` | DevOps VM2 | Jenkins + GitLab runner, JWT auth, scoped deploys to k3s | ready to test |
-| `vm3-ai-agent/` | DevOps VM3 | Claude agent with its own identity, rogue agent, kill switch | ready to test |
+| `ai-agents/` | DevOps VM1 (k3s) | Claude agent pod with its own signed identity, Secretless injects the key, rogue agent, kill switch | ready to test |
 
 Edit `lab.env` once (IPs, leader hostname, account). Every VM reads it.
 
@@ -18,7 +18,7 @@ Edit `lab.env` once (IPs, leader hostname, account). Every VM reads it.
 2. Secrets Manager VM: `secrets-manager/10`, `20`
 3. VM1: `vm1-k8s/00`, `10`, `11`, `20`, `21`, `22`, `23`, then `25`
 4. VM2: `vm2-cicd/10`, Jenkins UI steps, `11`, `20`
-5. VM3: `vm3-ai-agent/10`
+5. VM1: `ai-agents/10` (agents run as pods; VM3 is spare)
 
 Live lab state: [TRACKER.md](TRACKER.md). Rotation story and why nothing breaks: [ROTATION.md](ROTATION.md).
 

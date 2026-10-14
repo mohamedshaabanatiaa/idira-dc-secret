@@ -42,6 +42,6 @@
   - !permit { role: !group apps, privilege: [ read, authenticate ], resource: !webservice }
 
 # Who may use which login door
-- !grant { role: !group conjur/authn-jwt/k3s/apps,     members: [ !layer prod/k8s/boa, !layer prod/k8s/petstore ] }
+- !grant { role: !group conjur/authn-jwt/k3s/apps,     members: [ !layer prod/k8s/boa, !layer prod/k8s/petstore, !layer prod/k8s/agents ] }
 - !grant { role: !group conjur/authn-jwt/jenkins/apps, member: !layer prod/jenkins/pipelines }
 - !grant { role: !group conjur/authn-jwt/gitlab/apps,  member: !layer prod/gitlab/pipelines }
