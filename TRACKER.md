@@ -55,7 +55,7 @@ Live state of the lab. **No passwords here** (tracked outside the repo).
 |---|---|---|
 | 1 (13 Oct) | Docker, leader installed + configured, disk extended on all VMs, UI login, Windows CLI logged in, hostnames, repo on VM1-3, k3s, Bank of Anthos (2 fixes), pet store, policy loaded, authenticators enabled, VM1 connected, **Bank of Anthos and pet store migrated, pet store rotation without restart (31) verified** | BoA rotation (30), Jenkins on VM2 |
 
-| 2 (14 Oct) | CLI on VMs, scripts on official CLI, Jenkins + plugin, deploy tokens, Jenkins pipeline working (3rd integration), **AI agent pod working: signed identity, Claude key injected by Secretless; prompt injection blocked, rogue denied, kill switch OK** | After resume: clock check on all VMs. Pet store -> Secretless (22). Rotation (30, 31, 23). VM2 Jenkins + GitLab runner |
+| 2 (14 Oct) | CLI on VMs, scripts on official CLI, Jenkins + plugin, deploy tokens, Jenkins pipeline working (3rd integration), **AI agent pod working: signed identity, Claude key injected by Secretless; prompt injection blocked, rogue denied, kill switch OK. Audit verified: rogue denials + fetches in UI, rotation (admin update) in audit.log (`90-audit.sh petstore`)** | After resume: clock check on all VMs. Pet store -> Secretless (22). Rotation (30, 31, 23). VM2 Jenkins + GitLab runner |
 | 3 (15 Oct) | | **Next, in order:** 1) AI agents: `git pull` on VM1, Windows `conjur policy update -b prod -f prod.yml` and `-b root -f authenticators.yml`, then `ai-agents/10-deploy-agents.sh`, chat, rogue, kill switch. 2) Audit trail walk-through (UI + CLI). 3) Slides final pass. **Tentative, only if time:** Ansible integration, SPIFFE (SPIRE) agent identity on VM3 (2h cap) |
 | 4 (16 Oct) | | Rehearse: revert to before state, full run, deck |
 | 5 (17 Oct) | | Buffer and slides |
@@ -75,4 +75,5 @@ Live state of the lab. **No passwords here** (tracked outside the repo).
 | 14 Oct | Pipeline `dial tcp 10.0.0.3:6443: i/o timeout` (Secrets Manager part already OK) | VM1 firewall: `ufw allow 6443/tcp` (VM2: 8080) |
 | 14 Oct | Jenkins plugin SSL certificate drop-down empty; Certificate credential needs a private key (`expected one key got 0`) | leader cert + CA imported into Java `cacerts` on VM2 (`keytool -importcert -cacerts`), plugin cert field left empty. Plugin JWT audience left at default `cyberark-conjur` |
 | 14 Oct | Jenkins apt repo: `NO_PUBKEY 7198F4B714ABFC68` | Jenkins rotated its repo signing key: `jenkins.io-2026.key` (was 2023) in `10-install-jenkins.sh` |
+| 14 Oct | Rotation (admin update) not visible in the UI, fetches and denials are | UI shows a filtered view per object. Full record in `/opt/cyberark/conjur/logs/audit.log` on the SM VM; demo it with `90-audit.sh petstore` + version number in UI |
 | 13 Oct | nginx "cannot load certificate" during configure | harmless, cert created later in the run |
