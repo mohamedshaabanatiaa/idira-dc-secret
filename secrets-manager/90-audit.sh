@@ -1,10 +1,20 @@
 #!/usr/bin/env bash
-# Shows the last Secrets Manager audit events: who fetched what, allowed or denied.
-#   ./90-audit.sh            last 30 events
-#   ./90-audit.sh agent      filter on a word (agent, jenkins, gitlab, boa, denied)
-source "$(dirname "$0")/../common/lib.sh"
+# Shows the last Secrets Manager audit events: who fetched or changed what, allowed or denied.
+# Run on the Secrets Manager VM as root.
+#   ./90-audit.sh               last 30 events
+#   ./90-audit.sh rogue         filter on a word (rogue, support-agent, jenkins, petstore, failed)
+#   ./90-audit.sh check         health check: is the audit pipeline writing at all?
+# Audit files (official): /var/log/conjur/audit.log (syslog) and audit.json, inside the container.
+# Our install mounts that folder on the host at /opt/cyberark/conjur/logs.
+LOGDIR=/opt/cyberark/conjur/logs
 FILTER="${1:-}"
-docker exec conjur-leader bash -c 'ls /var/log/conjur/ 2>/dev/null' | sed 's/^/  log: /'
-docker exec conjur-leader bash -c 'tail -n 400 /var/log/conjur/audit.json 2>/dev/null || tail -n 400 /var/log/conjur/audit.log' \
-  | grep -i -- "${FILTER}" | tail -n 30 \
-  | (jq -r '"\(.timestamp // .time)  \(.message // .msg)"' 2>/dev/null || cat)
+
+if [ "$FILTER" = "check" ]; then
+  echo "== files"; ls -la "$LOGDIR"/audit* 2>/dev/null || echo "  no audit files in $LOGDIR"
+  echo "== services inside the container"
+  docker exec conjur-leader bash -c 'sv status /etc/service/* 2>/dev/null' | grep -Ei 'audit|syslog|postgres|conjur|ui' || true
+  echo "== last 3 lines"; tail -n 3 "$LOGDIR/audit.log" 2>/dev/null
+  exit 0
+fi
+
+tail -n 2000 "$LOGDIR/audit.log" | grep -i -- "$FILTER" | tail -n 30
