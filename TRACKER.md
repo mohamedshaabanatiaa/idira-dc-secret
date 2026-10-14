@@ -56,7 +56,7 @@ Live state of the lab. **No passwords here** (tracked outside the repo).
 | 1 (13 Oct) | Docker, leader installed + configured, disk extended on all VMs, UI login, Windows CLI logged in, hostnames, repo on VM1-3, k3s, Bank of Anthos (2 fixes), pet store, policy loaded, authenticators enabled, VM1 connected, **Bank of Anthos and pet store migrated, pet store rotation without restart (31) verified** | BoA rotation (30), Jenkins on VM2 |
 
 | 2 (14 Oct) | CLI on VMs, scripts on official CLI, Jenkins + plugin, deploy tokens, Jenkins pipeline working (3rd integration) | After resume: clock check on all VMs. Pet store -> Secretless (22). Rotation (30, 31, 23). VM2 Jenkins + GitLab runner |
-| 3 (15 Oct) | | Connect Jenkins + GitLab (20), VM3 agent, audit view |
+| 3 (15 Oct) | | **Next, in order:** 1) AI agents: `git pull` on VM1, Windows `conjur policy update -b prod -f prod.yml` and `-b root -f authenticators.yml`, then `ai-agents/10-deploy-agents.sh`, chat, rogue, kill switch. 2) Audit trail walk-through (UI + CLI). 3) Slides final pass. **Tentative, only if time:** Ansible integration, SPIFFE (SPIRE) agent identity on VM3 (2h cap) |
 | 4 (16 Oct) | | Rehearse: revert to before state, full run, deck |
 | 5 (17 Oct) | | Buffer and slides |
 
