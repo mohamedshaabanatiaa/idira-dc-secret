@@ -24,8 +24,15 @@ case "$MODE" in
     echo "== last 3 lines"; tail -n 3 "$LOG" 2>/dev/null | pretty
     ;;
   rotation)
-    echo "Pet store DB password: changes and fetches (last 10)"
-    grep 'prod/petstore/db/password' "$LOG" | grep -E 'operation="(update|fetch)"' | tail -n 10 | pretty
+    # The last change, then the first 3 fetches after it (Secretless fetches a lot,
+    # so showing every fetch would hide the change).
+    echo "Pet store DB password: last change, and the first fetches after it"
+    grep 'prod/petstore/db/password' "$LOG" | grep -E 'operation="(update|fetch)"' \
+      | awk '/operation="update"/ { n = NR } { line[NR] = $0 }
+             END { if (!n) { print "  no change recorded yet"; exit }
+                   print line[n]; c = 0
+                   for (i = n + 1; i <= NR && c < 3; i++) if (line[i] ~ /operation="fetch"/) { print line[i]; c++ } }' \
+      | pretty
     ;;
   denied)
     echo "Denied attempts (last 15)"
