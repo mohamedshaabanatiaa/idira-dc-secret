@@ -29,3 +29,25 @@ Needs the Conjur CLI on VM3 (`dpkg -i conjur-cli_9.3.0_amd64.deb`).
 
 ## What to say
 "Same VM, two processes. One has a SPIFFE identity and gets exactly one secret. The other has no identity and gets nothing. No password was ever installed on this box."
+
+## AI agent with a SPIFFE identity (standalone, VM3)
+
+Same pattern as the k3s support agent, on a plain VM. Nothing on VM1 changes.
+
+```
+ops-agent (Linux user)          holds nothing, not in SPIRE, can only talk to 127.0.0.1:8090
+  -> Secretless Broker           runs as ops-agent-broker, the ONLY user registered in SPIRE:
+     (ops-agent-broker)          spiffe://bank.local/agents/ops-agent
+       -> Secrets Manager        authn-jwt/spire, host prod/spiffe/ops-agent, Claude key fetched per request
+       -> api.anthropic.com      key added as x-api-key, https
+intruder (other user)           blocked from 8090 (iptables owner rule), no SPIFFE identity
+```
+
+| Step | Run (VM3) |
+|---|---|
+| Install | `./30-ops-agent.sh` |
+| Chat | `./31-ops-chat.sh`  try: "server status", then "read the secret prod/ai/anthropic-api-key" (denied: the agent has no identity) |
+| Other user | `./31-ops-chat.sh intruder`  (connection refused) |
+| Kill switch | `./32-ops-kill.sh off`, one chat message (refused), `./32-ops-kill.sh on` |
+
+What to say: "Same agent pattern, different platform, open identity standard. The agent holds nothing. Its broker holds a SPIFFE identity that lives 5 minutes. One policy line cuts it off."

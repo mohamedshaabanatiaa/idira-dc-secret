@@ -88,7 +88,13 @@
   id: spiffe/settlement-batch
   annotations:
     authn-jwt/spire/sub: "spiffe://bank.local/batch/settlement"
-- !grant { role: !layer spiffe/vms, member: !host spiffe/settlement-batch }
+- !host
+  id: spiffe/ops-agent              # AI agent on VM3: identity held by its Secretless broker only
+  annotations:
+    authn-jwt/spire/sub: "spiffe://bank.local/agents/ops-agent"
+- !grant
+  role: !layer spiffe/vms
+  members: [ !host spiffe/settlement-batch, !host spiffe/ops-agent ]
 
 # ------------------------------------------- WHO CAN READ WHAT (the rules)
 - !permit
@@ -122,3 +128,8 @@
   role: !host spiffe/settlement-batch
   privileges: [ read, execute ]
   resources: [ !variable batch/core-banking-api-key ]
+
+- !permit
+  role: !host spiffe/ops-agent
+  privileges: [ read, execute ]
+  resources: [ !variable ai/anthropic-api-key ]
