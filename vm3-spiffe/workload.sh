@@ -48,4 +48,4 @@ echo -e "${Y}   GET /secrets/${ACCOUNT}/variable/prod/ai/anthropic-api-key${N}"
 CODE=$(curl -sS -o /dev/null -w '%{http_code}' --cacert "$CERT" -H "Authorization: Token token=\"${TOKEN}\"" \
   "${URL}/secrets/${ACCOUNT}/variable/$(enc prod/ai/anthropic-api-key)")
 [[ "$CODE" == 200 ]] && echo -e "   ${R}✗ readable: policy too wide${N}\n" \
-                     || echo -e "   ${G}✓ denied (HTTP ${CODE}): least privilege${N}\n"
+                     || echo -e "   ${G}✓ denied (HTTP ${CODE}): not allowed, not even told the secret exists${N}\n"
