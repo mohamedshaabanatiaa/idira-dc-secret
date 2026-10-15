@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Shows Secrets Manager audit events in plain form: time (UTC), then what happened.
 # Run on the Secrets Manager VM as root.
+#   ./90-audit.sh               last 1000 events, readable (pipe to grep)
 #   ./90-audit.sh rotation      the pet store password: who changed it, who fetched it (demo, Loop 2)
 #   ./90-audit.sh denied        failed attempts only (demo, Loop 3: rogue agent)
 #   ./90-audit.sh <word>        last 30 events matching a word (petstore, jenkins, support-agent)
@@ -37,6 +38,9 @@ case "$MODE" in
   denied)
     echo "Denied attempts (last 15)"
     grep -E 'result="failure"' "$LOG" | tail -n 15 | pretty
+    ;;
+  "")
+    tail -n 1000 "$LOG" | pretty
     ;;
   *)
     grep -i -- "$MODE" "$LOG" | grep -v 'operation="check"' | tail -n 30 | pretty
