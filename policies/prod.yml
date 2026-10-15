@@ -26,6 +26,8 @@
 
 - !variable ai/anthropic-api-key           # Claude API key for agents
 
+- !variable batch/core-banking-api-key     # VM batch job (SPIFFE identity, VM3)
+
 # -------------------------------------------- IDENTITIES (hosts + layers)
 # Kubernetes pods (k3s on VM1). Host id = the pod's service account.
 - !layer k8s/boa
@@ -79,6 +81,15 @@
   - !host k8s/system:serviceaccount:agents:support-agent
   - !host k8s/system:serviceaccount:agents:rogue-agent
 
+# VM workloads with a SPIFFE identity, issued by open-source SPIRE on VM3.
+# Login sends the host id in the URL; the token's "sub" must equal the SPIFFE ID below.
+- !layer spiffe/vms
+- !host
+  id: spiffe/settlement-batch
+  annotations:
+    authn-jwt/spire/sub: "spiffe://bank.local/batch/settlement"
+- !grant { role: !layer spiffe/vms, member: !host spiffe/settlement-batch }
+
 # ------------------------------------------- WHO CAN READ WHAT (the rules)
 - !permit
   role: !layer k8s/boa
@@ -106,3 +117,8 @@
   resources: [ !variable ai/anthropic-api-key ]
 
 # rogue-agent: no rule. It can log in, it can read nothing.
+
+- !permit
+  role: !host spiffe/settlement-batch
+  privileges: [ read, execute ]
+  resources: [ !variable batch/core-banking-api-key ]

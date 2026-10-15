@@ -41,7 +41,19 @@
   - !group apps
   - !permit { role: !group apps, privilege: [ read, authenticate ], resource: !webservice }
 
+- !policy
+  id: conjur/authn-jwt/spire        # SPIFFE JWT-SVIDs from open-source SPIRE (VM3)
+  body:
+  - !webservice
+  - !variable public-keys           # SPIRE JWT signing keys (from the SPIRE bundle)
+  - !variable issuer
+  - !variable audience
+  # no token-app-property: the host id comes in the login URL, "sub" is checked by annotation
+  - !group apps
+  - !permit { role: !group apps, privilege: [ read, authenticate ], resource: !webservice }
+
 # Who may use which login door
 - !grant { role: !group conjur/authn-jwt/k3s/apps,     members: [ !layer prod/k8s/boa, !layer prod/k8s/petstore, !layer prod/k8s/agents ] }
 - !grant { role: !group conjur/authn-jwt/jenkins/apps, member: !layer prod/jenkins/pipelines }
 - !grant { role: !group conjur/authn-jwt/gitlab/apps,  member: !layer prod/gitlab/pipelines }
+- !grant { role: !group conjur/authn-jwt/spire/apps,  member: !layer prod/spiffe/vms }

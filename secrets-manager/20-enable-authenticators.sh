@@ -3,7 +3,7 @@
 # Safe to run again; authenticators whose policy is not loaded yet are just inactive.
 source "$(dirname "$0")/../common/lib.sh"
 NAME="conjur-leader"
-AUTHNS=(authn authn-jwt/k3s authn-jwt/jenkins authn-jwt/gitlab)
+AUTHNS=(authn authn-jwt/k3s authn-jwt/jenkins authn-jwt/gitlab authn-jwt/spire)
 
 log "Writing /etc/conjur/config/conjur.yml inside $NAME"
 {
