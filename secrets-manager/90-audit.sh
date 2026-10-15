@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Shows Secrets Manager audit events in plain form: time (UTC), then what happened.
+# Shows raw Secrets Manager audit events (times in UTC).
 # Run on the Secrets Manager VM as root.
-#   ./90-audit.sh               last 1000 events, readable (pipe to grep)
+#   ./90-audit.sh               last 1000 raw events (pipe to grep)
 #   ./90-audit.sh rotation      the pet store password: who changed it, who fetched it (demo, Loop 2)
 #   ./90-audit.sh denied        failed attempts only (demo, Loop 3: rogue agent)
 #   ./90-audit.sh <word>        last 30 events matching a word (petstore, jenkins, support-agent)
@@ -12,12 +12,8 @@ LOGDIR=/opt/cyberark/conjur/logs
 LOG="$LOGDIR/audit.log"
 MODE="${1:-}"
 
-# "2026-10-15T10:43:21.182+00:00 ... ] bank:user:admin updated bank:variable:..."
-#   ->  "10:43:21  admin updated prod/petstore/db/password"
-pretty() {
-  sed -E 's/^<[0-9]+>1 [0-9-]+T([0-9:]{8})[^ ]* .*\] (bank:.*)$/\1  \2/' \
-  | sed -E 's/bank:(user|host|variable|webservice|layer):?//g; s/bank://g'
-}
+# Output is the raw audit record, unchanged (what the SIEM receives).
+pretty() { cat; }
 
 case "$MODE" in
   check)
