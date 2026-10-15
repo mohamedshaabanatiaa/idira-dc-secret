@@ -9,5 +9,5 @@ cat <<TXT
 
 Audit, part 2 (UI): rogue-agent host -> denied attempts.
                     variable prod/petstore/db/password -> fetches + version number.
-Audit, part 3 (Secrets Manager VM): ./secrets-manager/90-audit.sh petstore
+Audit, part 3 (Secrets Manager VM): ./secrets-manager/90-audit.sh rotation
 TXT

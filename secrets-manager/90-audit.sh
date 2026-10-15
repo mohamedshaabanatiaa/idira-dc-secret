@@ -1,20 +1,37 @@
 #!/usr/bin/env bash
-# Shows the last Secrets Manager audit events: who fetched or changed what, allowed or denied.
+# Shows Secrets Manager audit events in plain form: time (UTC), then what happened.
 # Run on the Secrets Manager VM as root.
-#   ./90-audit.sh               last 30 events
-#   ./90-audit.sh rogue         filter on a word (rogue, support-agent, jenkins, petstore, failed)
+#   ./90-audit.sh rotation      the pet store password: who changed it, who fetched it (demo, Loop 2)
+#   ./90-audit.sh denied        failed attempts only (demo, Loop 3: rogue agent)
+#   ./90-audit.sh <word>        last 30 events matching a word (petstore, jenkins, support-agent)
 #   ./90-audit.sh check         health check: is the audit pipeline writing at all?
-# Audit files (official): /var/log/conjur/audit.log (syslog) and audit.json, inside the container.
-# Our install mounts that folder on the host at /opt/cyberark/conjur/logs.
+# Audit file (official): /var/log/conjur/audit.log in the container,
+# mounted on the host at /opt/cyberark/conjur/logs.
 LOGDIR=/opt/cyberark/conjur/logs
-FILTER="${1:-}"
+LOG="$LOGDIR/audit.log"
+MODE="${1:-}"
 
-if [ "$FILTER" = "check" ]; then
-  echo "== files"; ls -la "$LOGDIR"/audit* 2>/dev/null || echo "  no audit files in $LOGDIR"
-  echo "== services inside the container"
-  docker exec conjur-leader bash -c 'sv status /etc/service/* 2>/dev/null' | grep -Ei 'audit|syslog|postgres|conjur|ui' || true
-  echo "== last 3 lines"; tail -n 3 "$LOGDIR/audit.log" 2>/dev/null
-  exit 0
-fi
+# "2026-10-15T10:43:21.182+00:00 ... ] bank:user:admin updated bank:variable:..."
+#   ->  "10:43:21  admin updated prod/petstore/db/password"
+pretty() {
+  sed -E 's/^<[0-9]+>1 [0-9-]+T([0-9:]{8})[^ ]* .*\] (bank:.*)$/\1  \2/' \
+  | sed -E 's/bank:(user|host|variable|webservice|layer):?//g; s/bank://g'
+}
 
-tail -n 2000 "$LOGDIR/audit.log" | grep -i -- "$FILTER" | tail -n 30
+case "$MODE" in
+  check)
+    echo "== files"; ls -la "$LOGDIR"/audit* 2>/dev/null || echo "  no audit files in $LOGDIR"
+    echo "== last 3 lines"; tail -n 3 "$LOG" 2>/dev/null | pretty
+    ;;
+  rotation)
+    echo "Pet store DB password: changes and fetches (last 10)"
+    grep 'prod/petstore/db/password' "$LOG" | grep -E 'operation="(update|fetch)"' | tail -n 10 | pretty
+    ;;
+  denied)
+    echo "Denied attempts (last 15)"
+    grep -E 'result="failure"' "$LOG" | tail -n 15 | pretty
+    ;;
+  *)
+    grep -i -- "$MODE" "$LOG" | grep -v 'operation="check"' | tail -n 30 | pretty
+    ;;
+esac

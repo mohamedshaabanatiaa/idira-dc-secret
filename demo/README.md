@@ -20,7 +20,7 @@ Full questions and lines are in the speaker notes of the "Three problems" slide.
 | Loop | Scripts | Say |
 |---|---|---|
 | 1. Secret sprawl | `./10-show-secrets.sh`, `./01-prepare.sh`, `./10-show-secrets.sh`, payment in Bank of Anthos, `./30-jenkins.sh` + Jenkins build | "3 of 3 readable" then "0 of 3. Not one line of code changed." |
-| 2. Rotation breaks things | `./20-rotate.sh`, UI version number, on the **Secrets Manager VM**: `./secrets-manager/90-audit.sh petstore` | "Same pod. No restart. Every change on record." |
+| 2. Rotation breaks things | `./20-rotate.sh`, UI version number, on the **Secrets Manager VM**: `./secrets-manager/90-audit.sh rotation` | "Same pod. No restart. Every change on record." |
 | 3. AI agents | `./40-agent-chat.sh`, `./41-agent-rogue.sh`, `./42-agent-kill.sh off` / `on`, `./50-audit.sh`, UI rogue-agent host | "The agent never had the key. One policy line cuts it off." |
 
 ## Likely question on step 1
