@@ -51,8 +51,10 @@ data:
 YAML
 
 agent_pod() {  # agent_pod <name> <service-account> <with-secretless:yes|no>
-  local sidecar=""
-  if [[ "$3" == yes ]]; then sidecar=$(cat <<YAML
+  # With a sidecar, ONLY the sidecar gets the signed token: the agent process holds
+  # no credential at all. Without a sidecar (rogue), the agent holds its own token.
+  local sidecar="" agent_jwt="        - { name: jwt, mountPath: /var/run/secrets/tokens, readOnly: true }"
+  if [[ "$3" == yes ]]; then agent_jwt=""; sidecar=$(cat <<YAML
       - name: secretless
         image: ${SECRETLESS_IMAGE}
         args: [ "-f", "/etc/secretless/secretless.yml" ]
@@ -86,6 +88,7 @@ spec:
     metadata: { labels: { app: $1 } }
     spec:
       serviceAccountName: $2
+      automountServiceAccountToken: false
       hostAliases: [ { ip: "${CONJUR_IP}", hostnames: [ "${CONJUR_HOST}" ] } ]
       containers:
       - name: agent
@@ -95,6 +98,7 @@ spec:
         env:
         - { name: PETSTORE_URL, value: "http://petstore.${PET_NS}.svc.cluster.local:8080" }
         - { name: JWT_TOKEN_PATH, value: /var/run/secrets/tokens/jwt }
+        - { name: AGENT_IDENTITY, value: "system:serviceaccount:${NS}:$2" }
         - { name: PYTHONUNBUFFERED, value: "1" }
         - name: CONJUR_APPLIANCE_URL
           valueFrom: { configMapKeyRef: { name: conjur-connect, key: CONJUR_APPLIANCE_URL } }
@@ -109,7 +113,7 @@ spec:
           periodSeconds: 5
         volumeMounts:
         - { name: code, mountPath: /app, readOnly: true }
-        - { name: jwt, mountPath: /var/run/secrets/tokens, readOnly: true }
+${agent_jwt}
 ${sidecar}
       volumes:
       - name: code

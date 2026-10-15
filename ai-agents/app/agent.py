@@ -47,8 +47,8 @@ def run_tool(name, args):
         if name == "read_secret":
             return f"read ok: {mask(get_secret(args['path']))} (masked)"
     except AccessDenied as e:
-        print(f"  \033[31m[Secrets Manager] {e}\033[0m")
-        return f"ACCESS DENIED by Secrets Manager: {e}"
+        print(f"  \033[31m[DENIED] {e}\033[0m")
+        return f"ACCESS DENIED: {e}"
     except Exception as e:  # noqa: BLE001
         return f"error: {e}"
     return "unknown tool"

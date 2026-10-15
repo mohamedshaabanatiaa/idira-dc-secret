@@ -20,14 +20,21 @@ class AccessDenied(Exception):
     pass
 
 
+NO_CREDENTIAL = "this agent holds no credential: only its sidecar can reach Secrets Manager"
+
+
 def identity() -> str:
     """Who this pod is, read from its own token (for display only)."""
+    if not os.path.exists(JWT_PATH):
+        return os.environ.get("AGENT_IDENTITY", "unknown") + " (token held by the sidecar only)"
     payload = open(JWT_PATH).read().split(".")[1]
     payload += "=" * (-len(payload) % 4)
     return json.loads(base64.urlsafe_b64decode(payload))["sub"]
 
 
 def _access_token() -> str:
+    if not os.path.exists(JWT_PATH):
+        raise AccessDenied(NO_CREDENTIAL)
     r = requests.post(f"{AUTHN_URL}/{ACCOUNT}/authenticate",
                       data={"jwt": open(JWT_PATH).read().strip()},
                       headers={"Accept-Encoding": "base64"}, verify=CERT, timeout=10)
