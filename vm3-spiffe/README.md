@@ -46,7 +46,7 @@ intruder (other user)           blocked from 8090 (iptables owner rule), no SPIF
 | Step | Run (VM3) |
 |---|---|
 | Install | `./30-ops-agent.sh` |
-| Chat | `./31-ops-chat.sh`  try: "server status", then "read the secret prod/ai/anthropic-api-key" (denied: the agent has no identity) |
+| Chat | `./31-ops-chat.sh`  try: "server status" |
 | Other user | `./31-ops-chat.sh intruder`  (connection refused) |
 | Kill switch | `./32-ops-kill.sh off`, one chat message (refused), `./32-ops-kill.sh on` |
 
