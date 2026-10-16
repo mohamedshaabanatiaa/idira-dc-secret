@@ -36,6 +36,7 @@ server {
   jwt_key_type         = "rsa-2048"
   ca_ttl               = "720h"   # lab: signing keys stay stable past the panel date
   default_jwt_svid_ttl = "5m"     # every workload token lives 5 minutes
+  agent_ttl            = "720h"   # the node (agent) identity itself, renewed by the agent
   jwt_issuer           = "https://spire.${TD}"
 }
 plugins {
@@ -61,19 +62,15 @@ Restart=on-failure
 WantedBy=multi-user.target
 UNIT
 systemctl daemon-reload
-systemctl enable --now spire-server >/dev/null 2>&1
+systemctl enable spire-server >/dev/null 2>&1
+systemctl restart spire-server
 for _ in $(seq 1 30); do "$SRV" healthcheck >/dev/null 2>&1 && break; sleep 1; done
 "$SRV" healthcheck >/dev/null 2>&1 || die "SPIRE server not healthy: journalctl -u spire-server -n 50"
 ok "SPIRE server healthy"
 
-log "Agent (node attestation with a one-time join token)"
+log "Agent (node attestation: a fresh one-time join token at every start)"
 "$SRV" bundle show > "$D/conf/bootstrap.crt"
-if ! "$AGT" healthcheck -socketPath /tmp/spire-agent/public/api.sock >/dev/null 2>&1; then
-  TOKEN=$("$SRV" token generate -spiffeID "$NODE_ID" | awk '/Token/ {print $2}')
-  [[ -n "$TOKEN" ]] || die "no join token"
-  echo "JOIN_TOKEN=${TOKEN}" > "$D/conf/agent.env"; chmod 600 "$D/conf/agent.env"
-  rm -rf "$D/data/agent"/*
-  cat > "$D/conf/agent.conf" <<HCL
+cat > "$D/conf/agent.conf" <<HCL
 agent {
   data_dir          = "${D}/data/agent"
   log_level         = "INFO"
@@ -89,22 +86,35 @@ plugins {
   WorkloadAttestor "unix" { plugin_data {} }
 }
 HCL
-  cat > /etc/systemd/system/spire-agent.service <<UNIT
+# A join token works once. Server and agent share this VM, so the agent asks for a new
+# one each time it starts (reboot, crash, restart) instead of reusing a spent token.
+cat > "$D/bin/spire-agent-start.sh" <<SH
+#!/bin/sh
+for i in \$(seq 1 30); do
+  T=\$(${SRV} token generate -spiffeID ${NODE_ID} 2>/dev/null | awk '/Token/ {print \$2}')
+  [ -n "\$T" ] && break; sleep 2
+done
+[ -n "\$T" ] || { echo "no join token from the SPIRE server"; exit 1; }
+exec ${AGT} run -config ${D}/conf/agent.conf -joinToken "\$T"
+SH
+chmod 755 "$D/bin/spire-agent-start.sh"
+rm -f "$D/conf/agent.env"
+cat > /etc/systemd/system/spire-agent.service <<UNIT
 [Unit]
 Description=SPIRE agent
 After=spire-server.service
+Requires=spire-server.service
 [Service]
-EnvironmentFile=${D}/conf/agent.env
-ExecStart=${AGT} run -config ${D}/conf/agent.conf -joinToken \${JOIN_TOKEN}
-Restart=on-failure
+ExecStart=${D}/bin/spire-agent-start.sh
+Restart=always
+RestartSec=5
 [Install]
 WantedBy=multi-user.target
 UNIT
-  systemctl daemon-reload
-  systemctl enable spire-agent >/dev/null 2>&1
-  systemctl restart spire-agent
-  for _ in $(seq 1 30); do "$AGT" healthcheck -socketPath /tmp/spire-agent/public/api.sock >/dev/null 2>&1 && break; sleep 1; done
-fi
+systemctl daemon-reload
+systemctl enable spire-agent >/dev/null 2>&1
+systemctl restart spire-agent
+for _ in $(seq 1 30); do "$AGT" healthcheck -socketPath /tmp/spire-agent/public/api.sock >/dev/null 2>&1 && break; sleep 1; done
 "$AGT" healthcheck -socketPath /tmp/spire-agent/public/api.sock >/dev/null 2>&1 || die "SPIRE agent not healthy: journalctl -u spire-agent -n 50"
 ok "SPIRE agent healthy, node ${NODE_ID}"
 
