@@ -77,5 +77,6 @@ Live state of the lab. **No passwords here** (tracked outside the repo).
 | 14 Oct | Jenkins apt repo: `NO_PUBKEY 7198F4B714ABFC68` | Jenkins rotated its repo signing key: `jenkins.io-2026.key` (was 2023) in `10-install-jenkins.sh` |
 | 14 Oct | Rotation (admin update) not visible in the UI, fetches and denials are | UI shows a filtered view per object. Full record in `/opt/cyberark/conjur/logs/audit.log` on the SM VM; demo it with `90-audit.sh rotation` (raw) + version number in UI |
 | 15 Oct | Support agent could read the Claude key itself via `read_secret` (agent container had the same signed token as the sidecar) | token mounted only in the sidecar, `automountServiceAccountToken: false`; agent process holds no credential (verification pending) |
+| 16 Oct | Kill switch looked broken: a leftover day-2 host `prod/agents/support-agent` (API-key design) still had access to the Claude key (`policy load` never removes) | `ai-agents/40-remove-legacy-host.sh` deletes it; kill switch now prints who can use the key |
 | 15 Oct | `90-audit.sh` hid rotation events (last 30 lines full of fetch/check) | views `rotation` (last update + first fetches after it) and `denied`; output kept raw |
 | 13 Oct | nginx "cannot load certificate" during configure | harmless, cert created later in the run |

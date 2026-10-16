@@ -12,3 +12,5 @@ case "${1:-}" in
   *)   die "usage: $0 off|on" ;;
 esac
 rm -f "$f"
+echo "  Who can use the Claude key now:"
+conjur resource permitted-roles "${CONJUR_ACCOUNT}:variable:prod/ai/anthropic-api-key" execute | grep host: | sed 's/^/   /'
