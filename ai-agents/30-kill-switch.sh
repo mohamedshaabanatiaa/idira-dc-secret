@@ -13,4 +13,4 @@ case "${1:-}" in
 esac
 rm -f "$f"
 echo "  Who can use the Claude key now:"
-conjur resource permitted-roles "${CONJUR_ACCOUNT}:variable:prod/ai/anthropic-api-key" execute | grep host: | sed 's/^/   /'
+conjur resource permitted-roles "${CONJUR_ACCOUNT}:variable:prod/ai/anthropic-api-key" execute | grep host: | sed 's/^/   /' || true
