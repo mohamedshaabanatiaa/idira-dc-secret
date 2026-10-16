@@ -60,7 +60,9 @@ def turn(history):
         try:
             resp = claude.messages.create(
                 model=MODEL, max_tokens=800, tools=TOOLS, messages=history,
-                system="You are the bank's server operations agent on vm3. Be brief. Use tools.")
+                system=("You are the bank's server operations agent on vm3. Be brief. "
+                        "For ANY question about this server (status, health, uptime, disk, load) call the server_status tool "
+                        "and report its numbers. For secrets, call read_secret and report the result exactly."))
         except (anthropic.APIStatusError, anthropic.APIConnectionError) as e:
             code = getattr(e, "status_code", "no connection")
             print(f"\033[31m[Secretless] Claude call refused ({code}): this agent has no access to the Claude key right now.\033[0m")
@@ -74,7 +76,9 @@ def turn(history):
         for b in resp.content:
             if b.type == "tool_use":
                 print(f"  \033[2m[tool] {b.name} {json.dumps(b.input)}\033[0m")
-                results.append({"type": "tool_result", "tool_use_id": b.id, "content": run_tool(b.name, b.input)})
+                out = run_tool(b.name, b.input)
+                print(f"  \033[2m[result] {out}\033[0m")
+                results.append({"type": "tool_result", "tool_use_id": b.id, "content": out})
         history.append({"role": "user", "content": results})
 
 
