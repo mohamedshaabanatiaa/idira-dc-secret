@@ -73,12 +73,14 @@ After=ops-agent-svid.service
 Requires=ops-agent-svid.service
 [Service]
 User=ops-agent-broker
+# Do NOT set CONJUR_AUTHN_TOKEN_FILE: it makes Secretless wait for a token instead of logging in.
+# It writes its session token to the default /run/conjur/access-token.
+RuntimeDirectory=conjur
 Environment=CONJUR_APPLIANCE_URL=${CONJUR_URL}
 Environment=CONJUR_AUTHN_URL=${CONJUR_URL}/authn-jwt/spire
 Environment=CONJUR_ACCOUNT=${CONJUR_ACCOUNT}
 Environment=CONJUR_AUTHN_LOGIN=host/prod/spiffe/ops-agent
 Environment=JWT_TOKEN_PATH=${STATE}/jwt
-Environment=CONJUR_AUTHN_TOKEN_FILE=${STATE}/access-token
 Environment=CONJUR_CERT_FILE=/opt/spire/conf/conjur.pem
 ExecStartPre=/usr/bin/timeout 30 /bin/sh -c 'until [ -s ${STATE}/jwt ]; do sleep 1; done'
 ExecStart=$OPT/bin/secretless-broker -f $OPT/secretless.yml
