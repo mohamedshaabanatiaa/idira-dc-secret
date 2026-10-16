@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Act: Jenkins. Refreshes the 2h deploy token first (so it is never expired
-# on stage), then prints the steps. The run itself is in the Jenkins UI.
+# Act: Jenkins. After ./00-reset.sh the pipeline has NO deploy access: build once to show
+# it fail, then run this script (issues a 2h deploy token into Secrets Manager), build again.
 set -e
 "$(dirname "$0")/../vm1-k8s/25-cicd-deployers.sh" >/dev/null
-echo "Fresh 2h deploy token stored in Secrets Manager."
+echo "Fresh 2h deploy token stored in Secrets Manager (revoke all: ../vm1-k8s/26-revoke-deployers.sh)."
 cat <<TXT
 
 Jenkins: http://10.0.0.1:8080  ->  idira / boa-deploy  ->  Build with Parameters

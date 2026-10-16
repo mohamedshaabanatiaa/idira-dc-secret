@@ -7,9 +7,9 @@ Each script only calls the build scripts we already have, plus plain kubectl.
 
 | When | Script | What it does |
 |---|---|---|
-| 30 to 60 min before | `./00-reset.sh` | Both apps back to hardcoded passwords |
+| 30 to 60 min before | `./00-reset.sh` | Both apps back to hardcoded passwords, Jenkins deploy tokens revoked |
 | Live in Loop 1 (or before, if you skip the live migration) | `./01-prepare.sh` | Migrates both apps to Secrets Manager |
-| 10 min before | `./02-preflight.sh` | Clock, login, fresh 2h Jenkins tokens, agents and apps Running |
+| 10 min before | `./02-preflight.sh` | Clock, login, Jenkins access revoked, agents and apps Running |
 
 Open beforehand: the Secrets Manager UI (logged in), Jenkins, the Bank of Anthos page, and a terminal on the Secrets Manager VM.
 
@@ -19,7 +19,7 @@ Full questions and lines are in the speaker notes of the "Three problems" slide.
 
 | Loop | Scripts | Say |
 |---|---|---|
-| 1. Secret sprawl | `./10-show-secrets.sh`, `./01-prepare.sh`, `./10-show-secrets.sh`, payment in Bank of Anthos, `./30-jenkins.sh` + Jenkins build | "3 of 3 readable" then "0 of 3. Not one line of code changed." |
+| 1. Secret sprawl | `./10-show-secrets.sh`, `./01-prepare.sh`, `./10-show-secrets.sh`, payment in Bank of Anthos, Jenkins build (fails: no access), `./30-jenkins.sh`, build again (works) | "3 of 3 readable" then "0 of 3. Not one line of code changed." |
 | 2. Rotation breaks things | `./20-rotate.sh`, UI version number, on the **Secrets Manager VM**: `./secrets-manager/90-audit.sh rotation` | "Same pod. No restart. Every change on record." |
 | 3. AI agents | `./40-agent-chat.sh`, `./41-agent-rogue.sh`, `./42-agent-kill.sh off` / `on`, `./50-audit.sh`, UI rogue-agent host | "The agent never had the key. One policy line cuts it off." |
 
