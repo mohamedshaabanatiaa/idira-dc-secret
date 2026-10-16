@@ -86,7 +86,11 @@ def turn(history):
             return
         history.append({"role": "assistant", "content": resp["content"]})
         if resp["stop_reason"] != "tool_use":
-            print("agent> " + "".join(b.get("text", "") for b in resp["content"] if b["type"] == "text"))
+            txt = "".join(b.get("text", "") for b in resp["content"] if b["type"] == "text")
+            if not txt:
+                print(f"  \033[2m[debug] stop_reason={resp.get('stop_reason')} blocks={[b.get('type') for b in resp['content']]} "
+                      f"raw={json.dumps(resp)[:300]}\033[0m")
+            print("agent> " + txt)
             return
         results = []
         for b in resp["content"]:
