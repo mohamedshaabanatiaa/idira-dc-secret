@@ -44,11 +44,11 @@ if [[ ! -x "$OPT/bin/secretless-broker" ]]; then
 fi
 ok "$OPT/bin/secretless-broker"
 
-log "Agent program (Python venv with the Claude SDK)"
+log "Agent program (Python venv, plain HTTPS to Claude through the broker)"
 python3 -m venv --help >/dev/null 2>&1 && python3 -c 'import ensurepip' 2>/dev/null \
   || { apt-get update -qq && apt-get install -y -qq python3-venv >/dev/null; }
 [[ -x "$OPT/venv/bin/python" ]] || python3 -m venv "$OPT/venv"
-"$OPT/venv/bin/pip" install -q --upgrade anthropic
+"$OPT/venv/bin/pip" install -q --upgrade requests
 install -m 644 "$HERE/agent/ops_agent.py" "$OPT/ops_agent.py"
 install -m 644 "$HERE/agent/secretless.yml" "$OPT/secretless.yml"
 install -m 755 "$HERE/agent/svid-refresh.sh" "$OPT/bin/svid-refresh.sh"

@@ -11,15 +11,31 @@ import os
 import shutil
 import subprocess
 
-os.environ["HTTP_PROXY"] = os.environ["http_proxy"] = "http://127.0.0.1:8090"
-os.environ["NO_PROXY"] = os.environ["no_proxy"] = ".bank.local,localhost"
-
-import anthropic  # noqa: E402
+import requests
 
 MODEL = os.environ.get("AGENT_MODEL", "claude-sonnet-5-5")
 BROKER_ID = "spiffe://bank.local/agents/ops-agent"
-claude = anthropic.Anthropic(base_url="http://api.anthropic.com",
-                             api_key="injected-by-secretless", timeout=60, max_retries=0)
+BROKER = {"http": "http://127.0.0.1:8090", "https": "http://127.0.0.1:8090"}
+# Plain HTTP to the broker. No API key here: the broker adds x-api-key and upgrades to https.
+CLAUDE_URL = "http://api.anthropic.com/v1/messages"
+
+
+class Refused(Exception):
+    pass
+
+
+def claude(messages):
+    try:
+        r = requests.post(CLAUDE_URL, proxies=BROKER, timeout=60,
+                          headers={"anthropic-version": "2023-06-01", "content-type": "application/json"},
+                          json={"model": MODEL, "max_tokens": 800, "tools": TOOLS, "messages": messages,
+                                "system": SYSTEM})
+    except requests.RequestException as e:
+        raise Refused(f"no connection to the broker ({type(e).__name__})")
+    if r.status_code != 200:
+        raise Refused(f"HTTP {r.status_code}: {r.text[:160]}")
+    return r.json()
+
 
 TOOLS = [
     {"name": "server_status", "description": "Uptime, load and disk usage of this server.",
@@ -55,30 +71,30 @@ def run_tool(name, args):
     return "unknown tool"
 
 
+SYSTEM = ("You are the bank's server operations agent on vm3. Be brief. "
+          "For ANY question about this server (status, health, uptime, disk, load) call the server_status tool "
+          "and report its numbers. For secrets, call read_secret and report the result exactly.")
+
+
 def turn(history):
     while True:
         try:
-            resp = claude.messages.create(
-                model=MODEL, max_tokens=800, tools=TOOLS, messages=history,
-                system=("You are the bank's server operations agent on vm3. Be brief. "
-                        "For ANY question about this server (status, health, uptime, disk, load) call the server_status tool "
-                        "and report its numbers. For secrets, call read_secret and report the result exactly."))
-        except (anthropic.APIStatusError, anthropic.APIConnectionError) as e:
-            code = getattr(e, "status_code", "no connection")
-            print(f"\033[31m[Secretless] Claude call refused ({code}): this agent has no access to the Claude key right now.\033[0m")
+            resp = claude(history)
+        except Refused as e:
+            print(f"\033[31m[Secretless] Claude call refused ({e}): this agent has no access to the Claude key right now.\033[0m")
             history.pop()
             return
-        history.append({"role": "assistant", "content": resp.content})
-        if resp.stop_reason != "tool_use":
-            print("agent> " + "".join(b.text for b in resp.content if b.type == "text"))
+        history.append({"role": "assistant", "content": resp["content"]})
+        if resp["stop_reason"] != "tool_use":
+            print("agent> " + "".join(b.get("text", "") for b in resp["content"] if b["type"] == "text"))
             return
         results = []
-        for b in resp.content:
-            if b.type == "tool_use":
-                print(f"  \033[2m[tool] {b.name} {json.dumps(b.input)}\033[0m")
-                out = run_tool(b.name, b.input)
+        for b in resp["content"]:
+            if b["type"] == "tool_use":
+                print(f"  \033[2m[tool] {b['name']} {json.dumps(b['input'])}\033[0m")
+                out = run_tool(b["name"], b["input"])
                 print(f"  \033[2m[result] {out}\033[0m")
-                results.append({"type": "tool_result", "tool_use_id": b.id, "content": out})
+                results.append({"type": "tool_result", "tool_use_id": b["id"], "content": out})
         history.append({"role": "user", "content": results})
 
 
