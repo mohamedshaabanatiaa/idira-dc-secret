@@ -1,13 +1,11 @@
 #!/usr/bin/env bash
-# Installs open-source SPIRE (server + agent) on VM3 and registers one workload:
-#   Linux user "settlement" on vm3  ->  spiffe://bank.local/batch/settlement
-# A second user, "intruder", gets no registration (the negative test).
+# Installs open-source SPIRE (server + agent) on VM3. Workloads are registered by
+# 30-ops-agent.sh. User "intruder" gets no registration (the negative test).
 # Run on VM3 as root. Safe to run again.
 source "$(dirname "$0")/../common/lib.sh"
 need curl; need jq; need tar
 TD="bank.local"
 NODE_ID="spiffe://${TD}/node/vm3"
-WORKLOAD_ID="spiffe://${TD}/batch/settlement"
 D=/opt/spire
 SRV="$D/bin/spire-server"; AGT="$D/bin/spire-agent"
 
@@ -118,18 +116,8 @@ for _ in $(seq 1 30); do "$AGT" healthcheck -socketPath /tmp/spire-agent/public/
 "$AGT" healthcheck -socketPath /tmp/spire-agent/public/api.sock >/dev/null 2>&1 || die "SPIRE agent not healthy: journalctl -u spire-agent -n 50"
 ok "SPIRE agent healthy, node ${NODE_ID}"
 
-log "Workload users"
-id settlement >/dev/null 2>&1 || useradd -r -m -s /bin/bash settlement
-id intruder   >/dev/null 2>&1 || useradd -r -m -s /bin/bash intruder
-ok "settlement (registered), intruder (not registered)"
-
-log "Registration entry: user settlement on vm3 -> ${WORKLOAD_ID}"
-if "$SRV" entry show -spiffeID "$WORKLOAD_ID" | grep -q "Entry ID"; then
-  ok "already registered"
-else
-  "$SRV" entry create -parentID "$NODE_ID" -spiffeID "$WORKLOAD_ID" -selector unix:user:settlement >/dev/null
-  ok "registered"
-fi
-"$SRV" entry show -spiffeID "$WORKLOAD_ID" | sed 's/^/    /'
+log "Negative-test user"
+id intruder >/dev/null 2>&1 || useradd -r -m -s /bin/bash intruder
+ok "intruder (never registered)"
 
 ok "SPIRE ready. Next: ./10-connect-conjur.sh"

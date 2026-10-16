@@ -15,7 +15,7 @@ Live state of the lab. **No passwords here** (tracked outside the repo).
 | Secrets Manager | sm (was ubn2510) | 10.0.0.2 | 37 GB (extended) | 15 GB | Leader | **leader up** |
 | DevOps VM1 | vm1 (was ubn2510) | 10.0.0.3 | extended | 4 CPU | k3s + Bank of Anthos + pet store | **Bank of Anthos (Secrets Provider job) and pet store (Secretless sidecar) on Secrets Manager** |
 | DevOps VM2 | vm2 (was ubn2510) | 10.0.0.1 | extended | | Jenkins (GitLab cut) | **Jenkins pipeline `idira/boa-deploy` works: JWT login, 2h deploy token, bank renamed** |
-| DevOps VM3 | vm3 (was ubn2510) | 10.0.0.5 | extended | | SPIFFE: open-source SPIRE 1.15.3 + batch job (`vm3-spiffe/`) | **working: settlement gets 1 secret, intruder gets no identity** |
+| DevOps VM3 | vm3 (was ubn2510) | 10.0.0.5 | extended | | SPIFFE: open-source SPIRE 1.15.3 + ops agent (`vm3-spiffe/`) | **working: ops agent via SPIFFE + Secretless, intruder refused** |
 
 ## Secrets Manager
 

@@ -26,8 +26,6 @@
 
 - !variable ai/anthropic-api-key           # Claude API key for agents
 
-- !variable batch/core-banking-api-key     # VM batch job (SPIFFE identity, VM3)
-
 # -------------------------------------------- IDENTITIES (hosts + layers)
 # Kubernetes pods (k3s on VM1). Host id = the pod's service account.
 - !layer k8s/boa
@@ -85,16 +83,10 @@
 # Login sends the host id in the URL; the token's "sub" must equal the SPIFFE ID below.
 - !layer spiffe/vms
 - !host
-  id: spiffe/settlement-batch
-  annotations:
-    authn-jwt/spire/sub: "spiffe://bank.local/batch/settlement"
-- !host
   id: spiffe/ops-agent              # AI agent on VM3: identity held by its Secretless broker only
   annotations:
     authn-jwt/spire/sub: "spiffe://bank.local/agents/ops-agent"
-- !grant
-  role: !layer spiffe/vms
-  members: [ !host spiffe/settlement-batch, !host spiffe/ops-agent ]
+- !grant { role: !layer spiffe/vms, member: !host spiffe/ops-agent }
 
 # ------------------------------------------- WHO CAN READ WHAT (the rules)
 - !permit
@@ -123,11 +115,6 @@
   resources: [ !variable ai/anthropic-api-key ]
 
 # rogue-agent: no rule. It can log in, it can read nothing.
-
-- !permit
-  role: !host spiffe/settlement-batch
-  privileges: [ read, execute ]
-  resources: [ !variable batch/core-banking-api-key ]
 
 - !permit
   role: !host spiffe/ops-agent

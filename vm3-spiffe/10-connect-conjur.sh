@@ -15,7 +15,7 @@ conjur_ready
 log "Policy (add only): prod.yml, then authenticators.yml"
 conjur policy load -b prod -f "$LAB_ROOT/policies/prod.yml" >/dev/null
 conjur policy load -b root -f "$LAB_ROOT/policies/authenticators.yml" >/dev/null
-ok "host prod/spiffe/settlement-batch, secret prod/batch/core-banking-api-key, authenticator ${A}"
+ok "authenticator ${A} and the spiffe hosts"
 
 log "Authenticator ${A}: trust SPIRE's JWT signing keys"
 KEYS=$("$SRV" bundle show -format spiffe | jq -c '{keys: [.keys[] | select(.use == "jwt-svid") | del(.use)]}')
@@ -25,14 +25,10 @@ conjur variable set -i "$A/issuer"      -v "https://spire.bank.local"
 conjur variable set -i "$A/audience"    -v "conjur"
 ok "$(jq -r '.keys[].kid' <<<"$KEYS" | sed 's/^/kid /' | paste -sd' ')"
 
-log "Seeding the batch job's secret (random, lab only)"
-conjur variable set -i prod/batch/core-banking-api-key -v "cbk_$(openssl rand -hex 16)"
-ok "prod/batch/core-banking-api-key set"
-
 cat <<MSG
 
   One step on the Secrets Manager VM (allowlist the new authenticator):
       cd /opt/idira && git pull && ./secrets-manager/20-enable-authenticators.sh
-  The output must list authn-jwt/spire. Then here: ./20-workload.sh
+  The output must list authn-jwt/spire. Then here: ./30-ops-agent.sh
 
 MSG
