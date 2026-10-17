@@ -2,14 +2,21 @@
 # Loop 2: rotate the pet store database password. Same pod, no restart. Run on VM1.
 set -euo pipefail
 export KUBECONFIG=${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}
-NEW=$(openssl rand -hex 16)                    # the new password, never printed
+NEW=$(openssl rand -hex 16)   # new password: 32 random hex characters, generated here, never printed
 POD=$(kubectl -n petstore get pod -l app=petstore -o jsonpath='{.items[0].metadata.name}')
 IP=$(hostname -I | awk '{print $1}')
 
+HASH="select substr(rolpassword,1,40) from pg_authid where rolname='test_app';"   # stored hash, not the password
+
 echo "== Pod before: $POD"
+echo "== Password hash in the database BEFORE:"
+kubectl -n petstore exec petstore-db-0 -- psql -U test_app -d test_app -tAc "$HASH"
 
 echo "== 1. Change the password in the database (PostgreSQL)"
 kubectl -n petstore exec petstore-db-0 -- psql -U test_app -d test_app -qc "ALTER ROLE test_app WITH PASSWORD '${NEW}';"
+
+echo "== Password hash in the database AFTER (different = the password really changed):"
+kubectl -n petstore exec petstore-db-0 -- psql -U test_app -d test_app -tAc "$HASH"
 
 echo "== 2. Store the new password in Secrets Manager (new version, audited)"
 conjur variable set -i prod/petstore/db/password -v "$NEW"
