@@ -1,11 +1,15 @@
 # Policy: the bank's secrets model
 
-Three files, one per concern. Loaded by Security from the Windows CLI, as admin, in this order. Scripts never load policy, they only set values.
+Three files, one per concern. Applied by Security as admin, in this order.
+
+**One click:** `update-policies.bat` (Windows, double-click) or `./update-policies.sh` (Linux). Both pull from Git, then run `conjur policy update` on all 3 files and stop on the first error. `update` adds and changes but never deletes what a file leaves out. Never use `policy replace`: it replaces a whole branch.
+
+By hand:
 
 ```powershell
-conjur policy load -b root -f root.yml               # the environments: prod, dev
-conjur policy load -b prod -f prod.yml               # prod secrets, identities, rules
-conjur policy load -b root -f authenticators.yml     # login doors (JWT authenticators)
+conjur policy update -b root -f root.yml             # the environments: prod, dev
+conjur policy update -b prod -f prod.yml             # prod secrets, identities, rules
+conjur policy update -b root -f authenticators.yml   # login doors (JWT authenticators)
 ```
 
 Why separate files: each environment can get its own owner and review process (prod changes need approval, dev doesn't), and authenticators are platform plumbing owned by Security.
