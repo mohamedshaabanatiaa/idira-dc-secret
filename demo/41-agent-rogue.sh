@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
-# AI agent: rogue agent with a real identity but no permission. Everything BLOCKED.
-exec "$(dirname "$0")/../ai-agents/21-rogue.sh"
+# The rogue agent: a real identity (its own service account), but no permit. Everything denied.
+exec kubectl -n agents exec -it deploy/rogue-agent -c agent -- python /app/rogue.py

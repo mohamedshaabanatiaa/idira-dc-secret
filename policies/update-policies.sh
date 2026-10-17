@@ -1,18 +1,24 @@
 #!/usr/bin/env bash
-# Linux twin of update-policies.bat (VM1, VM2, VM3 or the Secrets Manager VM).
-# Pulls the latest policy files from Git, then applies all 3 with "conjur policy update":
+# Linux twin of update-policies.bat (VM1, VM3 or the Secrets Manager VM).
+# Pulls the latest policy files, then applies all 3 with "conjur policy update":
 # adds and changes, never deletes what a file leaves out. Never "policy replace".
-#   ./update-policies.sh
-source "$(dirname "$0")/../common/lib.sh"
-HERE="$(cd "$(dirname "$0")" && pwd)"
-log "git pull"
-git -C "$HERE/.." pull --ff-only || warn "git pull failed, using the local files"
-conjur_ready
-apply() {  # apply <branch> <file>
-  log "conjur policy update -b $1 -f $2"
-  conjur policy update -b "$1" -f "$HERE/$2" || die "stopped at $2: the steps after it were not applied"
-}
-apply root root.yml
-apply prod prod.yml
-apply root authenticators.yml
-ok "all 3 policies applied. Nothing was deleted."
+# Needs the Conjur CLI logged in as admin (conjur login -i admin).
+set -euo pipefail
+cd "$(dirname "$0")"
+
+echo "== git pull"
+git pull --ff-only || echo "   warn: git pull failed, using the local files"
+
+echo "== Logged in as:"
+conjur whoami
+
+echo "== 1/3 conjur policy update -b root -f root.yml             (environments: prod, dev)"
+conjur policy update -b root -f root.yml
+
+echo "== 2/3 conjur policy update -b prod -f prod.yml             (secrets, identities, permits)"
+conjur policy update -b prod -f prod.yml
+
+echo "== 3/3 conjur policy update -b root -f authenticators.yml   (login doors: k3s, jenkins, gitlab, spire)"
+conjur policy update -b root -f authenticators.yml
+
+echo "== Done: all 3 policies applied. Nothing was deleted."

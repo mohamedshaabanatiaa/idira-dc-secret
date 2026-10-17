@@ -1,11 +1,19 @@
 #!/usr/bin/env bash
 # Run 10 min BEFORE the panel, on VM1. Checks everything is ready.
-set -e
-R="$(cd "$(dirname "$0")/.." && pwd)"
-echo "== clock (must match the Secrets Manager VM)"; date -u
-echo "== Secrets Manager login"; conjur whoami
+export KUBECONFIG=${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}
+
+echo "== Clock (must match the Secrets Manager VM)"
+date -u
+
+echo "== Secrets Manager CLI logged in"
+conjur whoami
+
 echo "== Jenkins deploy access (must be revoked before the panel; ./30-jenkins.sh issues it live)"
-if kubectl -n boa get sa jenkins-deployer >/dev/null 2>&1; then echo "   still active: run $R/vm1-k8s/26-revoke-deployers.sh"; else echo "   revoked, ok"; fi
-echo "== AI agents"; kubectl -n agents get pods
-echo "== apps"; "$R/vm1-k8s/90-status.sh"
-echo; echo "Ready if: all pods Running. Then ./10-show-secrets.sh should show NO passwords."
+kubectl -n boa get serviceaccount jenkins-deployer 2>/dev/null && echo "   still active: run ./00-reset.sh" || echo "   revoked, ok"
+
+echo "== Pods (all must be Running)"
+kubectl -n boa get pods
+kubectl -n petstore get pods
+kubectl -n agents get pods
+
+echo; echo "Ready if all pods are Running. ./10-show-secrets.sh should show 3 of 3 HARDCODED (before Loop 1)."

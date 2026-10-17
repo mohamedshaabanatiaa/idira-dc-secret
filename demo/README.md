@@ -1,7 +1,7 @@
 # Demo runbook
 
 Everything runs on **VM1** (`cd /opt/idira/demo`) unless marked otherwise.
-Each script only calls the build scripts we already have, plus plain kubectl.
+Each script shows its real commands (kubectl, conjur): `cat` any of them to explain it. Settings come from `lab.env` and `vm1-k8s/config.env` only.
 
 ## Before the panel
 
