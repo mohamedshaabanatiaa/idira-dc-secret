@@ -12,7 +12,6 @@ kind: Job
 metadata: { name: secrets-sync }
 spec:
   backoffLimit: 0
-  ttlSecondsAfterFinished: 3600
   template:
     metadata: { labels: { app: secrets-sync } }
     spec:
