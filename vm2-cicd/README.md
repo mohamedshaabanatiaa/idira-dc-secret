@@ -28,12 +28,12 @@ Run `vm1-k8s/25-cicd-deployers.sh` within 2 hours of the demo (or `TOKEN_TTL=8h`
 
 ## Jenkins UI steps (from the Windows jump host, http://VM2_IP:8080)
 
-1. **Manage Jenkins > Credentials > System > Global > Add credentials**, kind *Secret file* or *Certificate*: upload `/etc/idira/conjur.pem` (copy it to the jump host, or paste). ID `conjur-cert`.
+1. Nothing to do for the certificate: `10-install-jenkins.sh` already added the Secrets Manager certificate to Java's trust store (`keytool -importcert -cacerts`). Check with `keytool -list -cacerts -storepass changeit | grep conjur-leader`.
 2. **Manage Jenkins > System > Secrets Manager Configuration**
    - Authentication type: **JWT**
    - Account: `bank` (your `CONJUR_ACCOUNT`)
    - Appliance URL: `https://<CONJUR_HOST>`
-   - SSL certificate: `conjur-cert`
+   - SSL certificate: **leave empty** (Java already trusts the leader)
    - **JWT Authentication**: Service ID `authn-jwt/jenkins`, Audience `cyberark-conjur` (plugin default), Signing Key Lifetime `10080`, Token Duration `120`, *Enable Identity Format Fields* **off**
    - Save. Check `curl http://localhost:8080/jwtauth/conjur-jwk-set` on VM2 returns keys.
 3. **New Item > Folder** named `idira`.
@@ -62,4 +62,5 @@ Run `vm1-k8s/25-cicd-deployers.sh` within 2 hours of the demo (or `TOKEN_TTL=8h`
 | Jenkins 401 | leader log `grep authn-jwt`; issuer mismatch -> rerun with `JENKINS_ISSUER='http://VM2_IP:8080/'`; host id must equal the `jenkins_name` claim |
 | GitLab 401 | host id in `policies/prod.yml` matches the project path exactly; job runs on `main`; leader can reach `gitlab.com` |
 | kubectl `Unauthorized` | token expired: rerun `vm1-k8s/25-cicd-deployers.sh` (that is the rotation) |
+| Plugin `PKIX path building failed` / SSL error | cert not in Java trust store: rerun `./10-install-jenkins.sh` (it re-imports), then `systemctl restart jenkins` |
 | kubectl x509 | k3s was installed before `--tls-san VM1_IP` was added: reinstall or use the node hostname |

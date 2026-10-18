@@ -14,6 +14,20 @@ if ! command -v kubectl >/dev/null; then
 fi
 ok "$(java -version 2>&1 | head -1), kubectl $(kubectl version --client -o json | jq -r .clientVersion.gitVersion)"
 
+log "Trust the Secrets Manager certificate in Java (the Jenkins plugin uses this)"
+# The leader cert is self-signed. The plugin's own cert field wants a key pair, so we add the
+# leader cert and its CA to Java's trust store instead and leave that field empty.
+conjur_cert
+TMP=$(mktemp -d)
+awk -v d="$TMP" '/BEGIN CERTIFICATE/{n++} n{print > (d "/c" n ".pem")}' "$CERT_FILE"
+for f in "$TMP"/c*.pem; do
+  a="conjur-leader-$(basename "$f" .pem)"
+  keytool -delete -cacerts -storepass changeit -alias "$a" >/dev/null 2>&1 || true
+  keytool -importcert -cacerts -storepass changeit -noprompt -alias "$a" -file "$f" >/dev/null
+done
+rm -rf "$TMP"
+ok "$(keytool -list -cacerts -storepass changeit | grep -c conjur-leader) cert(s) in Java cacerts"
+
 if ! command -v jenkins >/dev/null && [[ ! -d /usr/share/java/jenkins.war && ! -f /usr/share/java/jenkins.war ]]; then
   log "Jenkins LTS repo"
   mkdir -p /etc/apt/keyrings
