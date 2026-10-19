@@ -21,12 +21,11 @@ BOA=(
   "deployment/transactionhistory  ledger-db-config    SPRING_DATASOURCE_PASSWORD:prod/boa/ledger-db/password"
 )
 
-echo "== BoA: check Secrets Manager knows the 7 microservice identities (policy loaded once from policies/)"
-if ! conjur resource show host:prod/k8s/system:serviceaccount:boa:userservice >/dev/null 2>&1; then
-  echo "   missing. Load the policy once, then rerun this script:"
-  echo "   cd ../policies && conjur policy update -b prod -f prod.yml && conjur policy update -b prod -f once-boa-per-service.yml"
-  exit 1
-fi
+echo "== BoA: policy as code. One identity + one permit per microservice (prod.yml), old shared rule removed"
+conjur whoami >/dev/null || { echo "   Secrets Manager CLI not logged in: conjur login -i admin"; exit 1; }
+conjur policy update -b prod -f ../policies/prod.yml >/dev/null
+conjur policy update -b prod -f ../policies/once-boa-per-service.yml >/dev/null 2>&1 || true   # no-op once done
+conjur resource show host:prod/k8s/system:serviceaccount:boa:userservice >/dev/null && echo "   7 identities ready"
 
 for row in "${BOA[@]}"; do
   read -r obj cm map <<<"$row"; name=${obj#*/}
