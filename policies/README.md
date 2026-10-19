@@ -33,7 +33,7 @@ root
 |---|---|---|
 | **policy** (branch) | A folder with an owner. We use it for environments | `prod`, `dev` |
 | **variable** | A secret | `prod/boa/accounts-db/password` |
-| **host** | One machine identity | `prod/k8s/system:serviceaccount:boa:userservice` |
+| **host** | One machine identity | `prod/k8s/system:serviceaccount:boa:secrets-provider` |
 | **layer** | A group of hosts that get the same access | `prod/k8s/boa` |
 
 One rule type: `!permit` a role (layer or host) `read` (see it exists) + `execute` (get the value) on variables.
@@ -55,12 +55,12 @@ One rule type: `!permit` a role (layer or host) `read` (see it exists) + `execut
 conjur list -k variable                                              # every secret
 conjur list -k host                                                  # every identity
 conjur resource permitted-roles variable:prod/boa/accounts-db/password execute   # who can get this secret?
-conjur role memberships host:prod/k8s/system:serviceaccount:boa:userservice # what is this pod part of?
+conjur role memberships host:prod/k8s/system:serviceaccount:boa:secrets-provider # what is this pod part of?
 ```
 
 ## Likely panel questions
 
-- **What are the `authn-jwt/k3s/...` annotations on the hosts?** Extra checks on the token. Besides the name, the pod's token must also say namespace `boa` and service account `userservice`. Secrets Manager requires at least one such check per JWT host (`CONJ00099E` otherwise).
+- **What are the `authn-jwt/k3s/...` annotations on the hosts?** Extra checks on the token. Besides the name, the pod's token must also say namespace `boa` and service account `secrets-provider`. Secrets Manager requires at least one such check per JWT host (`CONJ00099E` otherwise).
 
 - **Why a layer and not a permit per host?** Add a second pod or pipeline: put it in the layer, no rule changes.
 - **Why `read` and `execute`?** `read` lets you see the secret exists (metadata, audit). `execute` returns the value. An auditor would get `read` only.

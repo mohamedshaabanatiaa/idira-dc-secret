@@ -10,7 +10,7 @@ k -n "$BOA_NS" get cm accounts-db-config ledger-db-config -o json 2>/dev/null \
   | jq -r '.items[] | .metadata.name as $n | .data|to_entries[]|select(.key|test("PASSWORD|URI"))|"    \($n): \(.key)=\(.value)"' \
   | grep . || echo "    none"
 echo "  Secrets synced from Secrets Manager:"
-k -n "$BOA_NS" get secret accounts-db-creds userservice-creds contacts-creds ledger-db-creds ledgerwriter-creds balancereader-creds transactionhistory-creds 2>/dev/null | sed 's/^/    /' || echo "    none"
+k -n "$BOA_NS" get secret accounts-db-creds ledger-db-creds 2>/dev/null | sed 's/^/    /' || echo "    none"
 echo "  URL: http://${IP}/  (testuser / bankofanthos)"
 
 log "Pet store (${PET_NS})"

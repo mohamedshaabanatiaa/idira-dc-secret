@@ -30,58 +30,17 @@
 # Kubernetes pods (k3s on VM1). Host id = the pod's service account.
 - !layer k8s/boa
 - !layer k8s/petstore
-# Bank of Anthos: one identity per microservice (its own service account).
-# Each pod runs Secrets Provider as an init container and fetches only its own secret.
 - !host
-  id: k8s/system:serviceaccount:boa:accounts-db
+  id: k8s/system:serviceaccount:boa:secrets-provider
   annotations:                                     # extra checks on the pod's token
     authn-jwt/k3s/kubernetes.io/namespace: boa
-    authn-jwt/k3s/kubernetes.io/serviceaccount/name: accounts-db
-- !host
-  id: k8s/system:serviceaccount:boa:userservice
-  annotations:                                     # extra checks on the pod's token
-    authn-jwt/k3s/kubernetes.io/namespace: boa
-    authn-jwt/k3s/kubernetes.io/serviceaccount/name: userservice
-- !host
-  id: k8s/system:serviceaccount:boa:contacts
-  annotations:                                     # extra checks on the pod's token
-    authn-jwt/k3s/kubernetes.io/namespace: boa
-    authn-jwt/k3s/kubernetes.io/serviceaccount/name: contacts
-- !host
-  id: k8s/system:serviceaccount:boa:ledger-db
-  annotations:                                     # extra checks on the pod's token
-    authn-jwt/k3s/kubernetes.io/namespace: boa
-    authn-jwt/k3s/kubernetes.io/serviceaccount/name: ledger-db
-- !host
-  id: k8s/system:serviceaccount:boa:ledgerwriter
-  annotations:                                     # extra checks on the pod's token
-    authn-jwt/k3s/kubernetes.io/namespace: boa
-    authn-jwt/k3s/kubernetes.io/serviceaccount/name: ledgerwriter
-- !host
-  id: k8s/system:serviceaccount:boa:balancereader
-  annotations:                                     # extra checks on the pod's token
-    authn-jwt/k3s/kubernetes.io/namespace: boa
-    authn-jwt/k3s/kubernetes.io/serviceaccount/name: balancereader
-- !host
-  id: k8s/system:serviceaccount:boa:transactionhistory
-  annotations:                                     # extra checks on the pod's token
-    authn-jwt/k3s/kubernetes.io/namespace: boa
-    authn-jwt/k3s/kubernetes.io/serviceaccount/name: transactionhistory
+    authn-jwt/k3s/kubernetes.io/serviceaccount/name: secrets-provider
 - !host
   id: k8s/system:serviceaccount:petstore:petstore-app
   annotations:
     authn-jwt/k3s/kubernetes.io/namespace: petstore
     authn-jwt/k3s/kubernetes.io/serviceaccount/name: petstore-app
-- !grant
-  role: !layer k8s/boa                             # layer = may log in through authn-jwt/k3s
-  members:
-  - !host k8s/system:serviceaccount:boa:accounts-db
-  - !host k8s/system:serviceaccount:boa:userservice
-  - !host k8s/system:serviceaccount:boa:contacts
-  - !host k8s/system:serviceaccount:boa:ledger-db
-  - !host k8s/system:serviceaccount:boa:ledgerwriter
-  - !host k8s/system:serviceaccount:boa:balancereader
-  - !host k8s/system:serviceaccount:boa:transactionhistory
+- !grant { role: !layer k8s/boa,      member: !host k8s/system:serviceaccount:boa:secrets-provider }
 - !grant { role: !layer k8s/petstore, member: !host k8s/system:serviceaccount:petstore:petstore-app }
 
 # Jenkins pipelines (VM2)
@@ -130,36 +89,10 @@
 - !grant { role: !layer spiffe/vms, member: !host spiffe/ops-agent }
 
 # ------------------------------------------- WHO CAN READ WHAT (the rules)
-# Bank of Anthos: each microservice reads only what it uses.
-- !permit                                         # accounts database: its own password
-  role: !host k8s/system:serviceaccount:boa:accounts-db
+- !permit
+  role: !layer k8s/boa
   privileges: [ read, execute ]
-  resources: [ !variable boa/accounts-db/password ]
-- !permit                                         # login service: connection string only
-  role: !host k8s/system:serviceaccount:boa:userservice
-  privileges: [ read, execute ]
-  resources: [ !variable boa/accounts-db/uri ]
-- !permit                                         # contacts service: connection string only
-  role: !host k8s/system:serviceaccount:boa:contacts
-  privileges: [ read, execute ]
-  resources: [ !variable boa/accounts-db/uri ]
-- !permit                                         # ledger database: its own password
-  role: !host k8s/system:serviceaccount:boa:ledger-db
-  privileges: [ read, execute ]
-  resources: [ !variable boa/ledger-db/password ]
-- !permit                                         # payments
-  role: !host k8s/system:serviceaccount:boa:ledgerwriter
-  privileges: [ read, execute ]
-  resources: [ !variable boa/ledger-db/password ]
-- !permit                                         # balances
-  role: !host k8s/system:serviceaccount:boa:balancereader
-  privileges: [ read, execute ]
-  resources: [ !variable boa/ledger-db/password ]
-- !permit                                         # history
-  role: !host k8s/system:serviceaccount:boa:transactionhistory
-  privileges: [ read, execute ]
-  resources: [ !variable boa/ledger-db/password ]
-# No microservice can read the other database's secrets.
+  resources: [ !variable boa/accounts-db/password, !variable boa/accounts-db/uri, !variable boa/ledger-db/password ]
 
 - !permit
   role: !layer k8s/petstore
