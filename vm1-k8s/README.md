@@ -43,20 +43,51 @@ The admin password is prompted once per run. Or `export CONJUR_ADMIN_PASSWORD=..
 Defined in `../policies/prod.yml` (loaded from the Windows CLI first):
 
 ```
-prod/k8s/system:serviceaccount:boa:secrets-provider      host, layer prod/k8s/boa
+prod/k8s/system:serviceaccount:boa:<workload>            7 hosts, layer prod/k8s/boa (one per microservice)
 prod/k8s/system:serviceaccount:petstore:petstore-app     host, layer prod/k8s/petstore
 prod/boa/accounts-db/{password,uri}, prod/boa/ledger-db/password
 prod/petstore/db/{host,port,username,password}
 ```
 
-Each layer can read only its own app's secrets. Identity comes from the Kubernetes service account token (audience `conjur`), so there is no API key anywhere in the cluster.
+Each identity can read only what it uses. Identity comes from the Kubernetes service account token (audience `conjur`), so there is no API key anywhere in the cluster.
+
+## Bank of Anthos: one identity per microservice (since 19 Oct)
+
+Before: one shared sync Job (service account `secrets-provider`) fetched all three Bank of Anthos secrets and every service shared two Kubernetes Secrets.
+
+Now every workload has its own service account, its own host in Secrets Manager, and its own permit:
+
+| Workload | Service account = host | Gets only | Kubernetes Secret |
+|---|---|---|---|
+| accounts-db (database) | `boa:accounts-db` | `prod/boa/accounts-db/password` | `accounts-db-creds` |
+| userservice (login) | `boa:userservice` | `prod/boa/accounts-db/uri` | `userservice-creds` |
+| contacts | `boa:contacts` | `prod/boa/accounts-db/uri` | `contacts-creds` |
+| ledger-db (database) | `boa:ledger-db` | `prod/boa/ledger-db/password` | `ledger-db-creds` |
+| ledgerwriter (payments) | `boa:ledgerwriter` | `prod/boa/ledger-db/password` | `ledgerwriter-creds` |
+| balancereader | `boa:balancereader` | `prod/boa/ledger-db/password` | `balancereader-creds` |
+| transactionhistory | `boa:transactionhistory` | `prod/boa/ledger-db/password` | `transactionhistory-creds` |
+
+How it works:
+1. Each pod has a Secrets Provider **init container** running as the pod's own service account.
+2. It logs in through `authn-jwt/k3s` with that service account token (audience `conjur`).
+3. It fills only its own Kubernetes Secret. A Role lets that service account `get`/`update` that one Secret, nothing else.
+4. The app container starts after it and reads the Secret with `envFrom`. Zero code change.
+5. Refresh or rotation = restart the workload (`./sync-boa.sh`). The init container fetches again.
+
+What it proves: no microservice can read the other database's secrets, and every fetch in the audit log names the exact microservice.
+
+Limit, honestly: the services of one database still share one database user, so per-service identity gives least privilege on Secrets Manager and per-service audit, not separate database rights. Next step in production: one database user per service, read-only where possible (balancereader, transactionhistory).
+
+Moving an existing lab to this model: load `prod.yml` (update), then once `conjur policy update -b prod -f once-boa-per-service.yml` (removes the old shared rule and host), then `../demo/00-reset.sh` and `../demo/01-prepare.sh`.
+
+Roll back: `git checkout 46f6cf7 -- policies/prod.yml demo/01-prepare.sh vm1-k8s/` then reload prod.yml and reset.
 
 ## Demo flow (5 minutes)
 
 1. `./90-status.sh` -> passwords visible in ConfigMaps and env. "This is what your auditors find."
 2. `./21-migrate-boa.sh` -> ConfigMaps clean, app still works. Log in, send a payment.
 3. `./22-migrate-petstore.sh` -> app env has no password, only a sidecar.
-4. `./30-rotate-boa.sh` -> new password, only 2 deployments restart.
+4. `./30-rotate-boa.sh` -> new password, only 2 deployments restart, each refetches with its own identity.
 5. `./31-rotate-petstore.sh` -> new password, same pod, zero restarts.
 6. Secrets Manager audit (UI or `/audit` on the leader): every fetch tied to a named workload identity.
 
