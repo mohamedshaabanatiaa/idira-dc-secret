@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Loop 1, live: moves both apps from hardcoded passwords to Secrets Manager. Run on VM1.
-#   Bank of Anthos -> Secrets Provider job fills Kubernetes Secrets (apps unchanged)
+#   Bank of Anthos -> Secrets Provider init container per microservice, own identity each (apps unchanged)
 #   Pet store      -> Secretless sidecar (app holds no password at all)
 set -euo pipefail
 export KUBECONFIG=${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}
@@ -8,108 +8,89 @@ cd "$(dirname "$0")"
 source ../lab.env; source ../vm1-k8s/config.env      # settings only
 
 # ---------------------------------------------------------------- BANK OF ANTHOS
-echo "== BoA 1. Identity for the sync job: service account secrets-provider, may only update Secrets in boa"
-kubectl -n boa apply -f - <<YAML
+# One identity per microservice. Each pod runs Secrets Provider as an init container:
+# it logs in with the pod's own service account token and fills only that pod's Secret.
+#   workload                 reads its env from     gets only this from Secrets Manager
+BOA=(
+  "statefulset/accounts-db        accounts-db-config  POSTGRES_PASSWORD:prod/boa/accounts-db/password"
+  "deployment/userservice         accounts-db-config  ACCOUNTS_DB_URI:prod/boa/accounts-db/uri"
+  "deployment/contacts            accounts-db-config  ACCOUNTS_DB_URI:prod/boa/accounts-db/uri"
+  "statefulset/ledger-db          ledger-db-config    POSTGRES_PASSWORD:prod/boa/ledger-db/password"
+  "deployment/ledgerwriter        ledger-db-config    SPRING_DATASOURCE_PASSWORD:prod/boa/ledger-db/password"
+  "deployment/balancereader       ledger-db-config    SPRING_DATASOURCE_PASSWORD:prod/boa/ledger-db/password"
+  "deployment/transactionhistory  ledger-db-config    SPRING_DATASOURCE_PASSWORD:prod/boa/ledger-db/password"
+)
+
+for row in "${BOA[@]}"; do
+  read -r obj cm map <<<"$row"; name=${obj#*/}
+  echo "== BoA ${name}: own service account, a Secret holding only a MAP (${map}), rights on that one Secret"
+  kubectl -n boa apply -f - <<YAML
 apiVersion: v1
 kind: ServiceAccount
-metadata: { name: secrets-provider }
+metadata: { name: ${name} }
+---
+apiVersion: v1
+kind: Secret
+metadata: { name: ${name}-creds }
+stringData:
+  conjur-map: "${map%%:*}: ${map#*:}"
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
-metadata: { name: secrets-provider }
-rules: [ { apiGroups: [""], resources: ["secrets"], verbs: ["get", "update"] } ]
+metadata: { name: ${name}-creds }
+rules: [ { apiGroups: [""], resources: ["secrets"], resourceNames: ["${name}-creds"], verbs: ["get", "update"] } ]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
-metadata: { name: secrets-provider }
-subjects: [ { kind: ServiceAccount, name: secrets-provider } ]
-roleRef: { kind: Role, name: secrets-provider, apiGroup: rbac.authorization.k8s.io }
+metadata: { name: ${name}-creds }
+subjects: [ { kind: ServiceAccount, name: ${name} } ]
+roleRef: { kind: Role, name: ${name}-creds, apiGroup: rbac.authorization.k8s.io }
 YAML
+done
 
-echo "== BoA 2. Kubernetes Secrets that hold only a MAP to Secrets Manager paths, no values"
-kubectl -n boa apply -f - <<YAML
-apiVersion: v1
-kind: Secret
-metadata: { name: accounts-db-creds }
-stringData:
-  conjur-map: |-
-    POSTGRES_PASSWORD: prod/boa/accounts-db/password
-    ACCOUNTS_DB_URI: prod/boa/accounts-db/uri
----
-apiVersion: v1
-kind: Secret
-metadata: { name: ledger-db-creds }
-stringData:
-  conjur-map: |-
-    POSTGRES_PASSWORD: prod/boa/ledger-db/password
-    SPRING_DATASOURCE_PASSWORD: prod/boa/ledger-db/password
-YAML
-
-echo "== BoA 3. Secrets Provider job: logs in with its service account token (authn-jwt/k3s), writes the values"
-kubectl -n boa delete job secrets-sync --ignore-not-found
-kubectl -n boa apply -f - <<YAML
-apiVersion: batch/v1
-kind: Job
-metadata: { name: secrets-sync }
-spec:
-  backoffLimit: 0
-  template:
-    spec:
-      serviceAccountName: secrets-provider
-      restartPolicy: Never
-      hostAliases: [ { ip: "${CONJUR_IP}", hostnames: [ "${CONJUR_HOST}" ] } ]
-      containers:
-      - name: secrets-provider
-        image: ${SP_IMAGE}
-        imagePullPolicy: IfNotPresent
-        env:
-        - { name: CONTAINER_MODE,      value: application }
-        - { name: SECRETS_DESTINATION, value: k8s_secrets }
-        - { name: K8S_SECRETS,         value: "accounts-db-creds,ledger-db-creds" }
-        - { name: JWT_TOKEN_PATH,      value: /var/run/secrets/tokens/jwt }
-        - name: MY_POD_NAME
-          valueFrom: { fieldRef: { fieldPath: metadata.name } }
-        - name: MY_POD_NAMESPACE
-          valueFrom: { fieldRef: { fieldPath: metadata.namespace } }
-        - name: CONJUR_APPLIANCE_URL
-          valueFrom: { configMapKeyRef: { name: conjur-connect, key: CONJUR_APPLIANCE_URL } }
-        - name: CONJUR_AUTHN_URL
-          valueFrom: { configMapKeyRef: { name: conjur-connect, key: CONJUR_AUTHN_URL } }
-        - name: CONJUR_ACCOUNT
-          valueFrom: { configMapKeyRef: { name: conjur-connect, key: CONJUR_ACCOUNT } }
-        - name: CONJUR_SSL_CERTIFICATE
-          valueFrom: { configMapKeyRef: { name: conjur-connect, key: ssl-certificate } }
-        volumeMounts: [ { name: jwt, mountPath: /var/run/secrets/tokens, readOnly: true } ]
-      volumes:
-      - name: jwt
-        projected:
-          sources: [ { serviceAccountToken: { path: jwt, audience: conjur, expirationSeconds: 600 } } ]
-YAML
-kubectl -n boa wait --for=condition=complete job/secrets-sync --timeout=120s
-
-echo "== BoA 4. Remove the hardcoded passwords from the ConfigMaps"
+echo "== BoA: remove the hardcoded passwords from the ConfigMaps"
 for pair in accounts-db-config:POSTGRES_PASSWORD accounts-db-config:ACCOUNTS_DB_URI \
             ledger-db-config:POSTGRES_PASSWORD ledger-db-config:SPRING_DATASOURCE_PASSWORD; do
   cm=${pair%%:*}; key=${pair##*:}
   kubectl -n boa patch configmap "$cm" --type=json -p "[{\"op\":\"remove\",\"path\":\"/data/${key}\"}]" 2>/dev/null || true
 done
 
-echo "== BoA 5. Each workload reads the synced Secret next to its ConfigMap (envFrom). No code change"
-for w in statefulset/accounts-db:accounts deployment/userservice:accounts deployment/contacts:accounts \
-         statefulset/ledger-db:ledger deployment/ledgerwriter:ledger deployment/balancereader:ledger \
-         deployment/transactionhistory:ledger; do
-  obj=${w%%:*}; db=${w##*:}
-  # find the container that already loads <db>-db-config, add the Secret to the same container
-  i=$(kubectl -n boa get "$obj" -o json | jq -r --arg cm "${db}-db-config" \
-      '.spec.template.spec.containers | to_entries[] | select(.value.envFrom // [] | map(.configMapRef.name) | index($cm)) | .key' | head -1)
-  kubectl -n boa get "$obj" -o json | jq -e --arg s "${db}-db-creds" --argjson i "$i" \
-      '.spec.template.spec.containers[$i].envFrom | map(.secretRef.name) | index($s)' >/dev/null && continue
-  kubectl -n boa patch "$obj" --type=json \
-    -p "[{\"op\":\"add\",\"path\":\"/spec/template/spec/containers/${i}/envFrom/-\",\"value\":{\"secretRef\":{\"name\":\"${db}-db-creds\"}}}]"
+echo "== BoA: add the Secrets Provider init container to each workload, run it as the workload's own service account"
+for row in "${BOA[@]}"; do
+  read -r obj cm map <<<"$row"; name=${obj#*/}
+  INIT=$(cat <<JSON
+{ "name": "secrets-provider", "image": "${SP_IMAGE}", "imagePullPolicy": "IfNotPresent",
+  "env": [
+    { "name": "CONTAINER_MODE",      "value": "init" },
+    { "name": "SECRETS_DESTINATION", "value": "k8s_secrets" },
+    { "name": "K8S_SECRETS",         "value": "${name}-creds" },
+    { "name": "JWT_TOKEN_PATH",      "value": "/var/run/secrets/tokens/jwt" },
+    { "name": "MY_POD_NAME",      "valueFrom": { "fieldRef": { "fieldPath": "metadata.name" } } },
+    { "name": "MY_POD_NAMESPACE", "valueFrom": { "fieldRef": { "fieldPath": "metadata.namespace" } } },
+    { "name": "CONJUR_APPLIANCE_URL",   "valueFrom": { "configMapKeyRef": { "name": "conjur-connect", "key": "CONJUR_APPLIANCE_URL" } } },
+    { "name": "CONJUR_AUTHN_URL",       "valueFrom": { "configMapKeyRef": { "name": "conjur-connect", "key": "CONJUR_AUTHN_URL" } } },
+    { "name": "CONJUR_ACCOUNT",         "valueFrom": { "configMapKeyRef": { "name": "conjur-connect", "key": "CONJUR_ACCOUNT" } } },
+    { "name": "CONJUR_SSL_CERTIFICATE", "valueFrom": { "configMapKeyRef": { "name": "conjur-connect", "key": "ssl-certificate" } } } ],
+  "volumeMounts": [ { "name": "conjur-jwt", "mountPath": "/var/run/secrets/tokens", "readOnly": true } ] }
+JSON
+)
+  kubectl -n boa get "$obj" -o json | jq \
+    --arg sa "$name" --arg cm "$cm" --arg sec "${name}-creds" --arg ip "$CONJUR_IP" --arg host "$CONJUR_HOST" --argjson init "$INIT" '
+    .spec.template.spec.serviceAccountName = $sa
+    | .spec.template.spec.hostAliases = [ { ip: $ip, hostnames: [ $host ] } ]
+    | .spec.template.spec.volumes = ((.spec.template.spec.volumes // []) | map(select(.name != "conjur-jwt"))
+        + [ { name: "conjur-jwt", projected: { sources: [ { serviceAccountToken: { path: "jwt", audience: "conjur", expirationSeconds: 600 } } ] } } ])
+    | .spec.template.spec.initContainers = ((.spec.template.spec.initContainers // []) | map(select(.name != "secrets-provider")) + [ $init ])
+    | .spec.template.spec.containers |= map(
+        if ((.envFrom // []) | map(.configMapRef.name) | index($cm)) != null
+        then .envFrom = ((.envFrom | map(select(.secretRef.name != $sec))) + [ { secretRef: { name: $sec } } ])
+        else . end)' \
+  | kubectl replace -f -
 done
-for w in statefulset/accounts-db statefulset/ledger-db deploy/userservice deploy/contacts \
-         deploy/ledgerwriter deploy/balancereader deploy/transactionhistory; do
-  kubectl -n boa rollout status "$w" --timeout=300s
+
+for row in "${BOA[@]}"; do
+  read -r obj _ _ <<<"$row"
+  kubectl -n boa rollout status "$obj" --timeout=300s
 done
 
 # ---------------------------------------------------------------- PET STORE

@@ -1,0 +1,13 @@
+# =============================================================================
+# once-boa-per-service.yml  -  RUN ONCE, after prod.yml, when moving Bank of Anthos
+# from one shared sync job to one identity per microservice.
+#     conjur policy update -b prod -f once-boa-per-service.yml
+# "update" only removes what is written here: the old shared rule and the old host.
+# =============================================================================
+- !deny
+  role: !layer k8s/boa
+  privileges: [ read, execute ]
+  resources: [ !variable boa/accounts-db/password, !variable boa/accounts-db/uri, !variable boa/ledger-db/password ]
+
+- !delete
+  record: !host k8s/system:serviceaccount:boa:secrets-provider
